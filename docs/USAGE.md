@@ -298,9 +298,13 @@ After applying and approving fixes, commit them to git:
 
 ## Extending SecDevAI
 
+SecDevAI's security contexts and skills live in the `lola-module/` directory and follow the [Lola](https://github.com/RedHatProductSecurity/lola) AI Context Module pattern. Each skill uses a `SKILL.md` following the [Agent Skills](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) pattern.
+
+> **Contributing**: We encourage you to contribute improvements and new contexts back to the project. See [CONTRIBUTING.md](../CONTRIBUTING.md) for details.
+
 ### Adding Custom Security Rules
 
-Edit `.secdevai/context/security-review.context` to add custom security patterns:
+Add or update security patterns in `lola-module/skills/secdevai-review/context/security-review.context`:
 
 ```markdown
 ## Custom Pattern
@@ -319,7 +323,7 @@ Edit `.secdevai/context/security-review.context` to add custom security patterns
 
 ### Adding New Tools
 
-Edit `.secdevai/scripts/security-review.sh` to add support for new security tools:
+Edit `lola-module/skills/secdevai-tool/scripts/security-review.sh` to add support for new security tools:
 
 ```bash
 run_custom_tool() {
@@ -336,10 +340,10 @@ run_custom_tool() {
 
 ### Customizing Output Format
 
-Modify the output format in `.secdevai/context/security-review.context` under the "Output Format" section.
+Modify the output format in `lola-module/skills/secdevai-review/context/security-review.context` under the "Output Format" section.
 
 ### Adding Language Support
 
-1. Add language-specific patterns to `security-review.context`
-2. Update tool integration script for language-specific tools
+1. Add language-specific patterns to `lola-module/skills/secdevai-review/context/security-review.context`
+2. Update tool integration script in `lola-module/skills/secdevai-tool/scripts/` for language-specific tools
 3. Add language detection logic

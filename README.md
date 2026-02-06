@@ -35,7 +35,7 @@ While you can ask standard Cursor, Claude Code, or Gemini CLI for code review, S
 
 - **Transparency**: See exactly which security patterns and rules are applied to your code.
 - **Control**: Customize and extend security contexts to fit your organization's specific needs.
-- **Continuous Improvement**: Update and refine security review templates based on your team's experience and evolving threats.
+- **Continuous Improvement**: Update and refine security review contexts based on your team's experience and evolving threats.
 
 This approach enables you to continually improve the quality of security review results, rather than relying on opaque, fixed AI models that cannot be modified or enhanced.
 
@@ -52,10 +52,13 @@ This approach enables you to continually improve the quality of security review 
 
 ```
 secdevai/
-├── templates/                 # Template system
-│   ├── commands/             # Slash command templates
-│   ├── context/              # Security analysis contexts
-│   └── scripts/              # Helper scripts
+├── lola-module/              # Lola AI Context Module (skills & contexts)
+│   └── skills/              # Security skills
+│       ├── secdevai/        # Main entry point skill
+│       ├── secdevai-review/ # Security review skill (with context files)
+│       ├── secdevai-fix/    # Fix suggestion skill
+│       ├── secdevai-help/   # Help skill
+│       └── secdevai-tool/   # Tool integration skill (with scripts)
 ├── src/secdevai_cli/         # CLI implementation
 └── docs/                     # Documentation
 ```
@@ -69,10 +72,6 @@ secdevai/
 ### Command not found
 - Make sure SecDevAI is installed: `secdevai --help`
 - For `uv`, ensure `~/.local/bin` is in your PATH
-
-### Templates not found
-- Ensure you're running `secdevai` from the project root
-- Check that `.secdevai/` directory was created
 
 ### Platform not detected
 - SecDevAI defaults to Cursor if no platform directories (`.cursor/`, `.claude/`, `.gemini/`) are detected
@@ -95,5 +94,10 @@ This project is licensed under the MIT [License](LICENSE)
 
 ## Contributing
 
-[CONTRIBUTING.md](CONTRIBUTING.md)
+We welcome contributions! The main ways to contribute are by updating or adding more contexts into the **`lola-module/`** directory and/or **skills**.
+
+- **`lola-module/`**: Follows the [Lola AI Context Module](https://github.com/RedHatProductSecurity/lola) pattern for packaging and distributing AI skills across multiple assistants.
+- **Skills**: Follow the [Agent Skills](https://platform.claude.com/docs/en/agents-and-tools/agent-skills/overview) pattern for writing effective `SKILL.md` files.
+
+See [CONTRIBUTING.md](CONTRIBUTING.md) for more details.
 
