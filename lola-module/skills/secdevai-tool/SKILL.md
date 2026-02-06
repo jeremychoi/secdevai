@@ -1,3 +1,8 @@
+---
+name: secdevai-tool
+description: Run external security analysis tools such as Bandit (Python linter) and OSSF Scorecard (repository assessment). Use when the user wants to execute specific security tools, combine their output with AI analysis, or run all available tools at once.
+---
+
 # SecDevAI Tool Command (Alias)
 
 ## Description
@@ -14,7 +19,7 @@ Alias for `/secdevai tool` - Use specific security tool for analysis.
 This is an alias for `/secdevai tool`. See the main `/secdevai` command documentation for full details.
 
 When invoked, this command:
-- Runs the specified security tool via `.secdevai/scripts/security-review.sh`
+- Runs the specified security tool via `scripts/security-review.sh`
 - Parses tool output and synthesizes with AI analysis
 - Falls back to AI-only analysis if tool is unavailable
 - Provides integrated findings combining tool results with AI insights
@@ -38,7 +43,7 @@ When user runs `/secdevai-tool`:
    - Do NOT run any tool automatically - wait for user to specify which tool they want
 
 2. **If tool specified** (e.g., `/secdevai-tool bandit`, `/secdevai-tool scorecard`, `/secdevai-tool all`):
-   - Run the specified security tool(s) via `.secdevai/scripts/security-review.sh`
+   - Run the specified security tool(s) via `scripts/security-review.sh`
    - If `all` is specified: Run both bandit and scorecard, combining their findings
    - Parse tool output and synthesize with AI analysis
    - If tool unavailable: Fall back to AI-only analysis with a message explaining the tool wasn't found

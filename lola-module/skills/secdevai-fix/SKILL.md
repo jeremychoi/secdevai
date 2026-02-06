@@ -1,3 +1,8 @@
+---
+name: secdevai-fix
+description: Apply suggested security fixes from a prior review. Use when the user wants to remediate security findings with before/after code diffs, severity filtering, and explicit approval before modifying code.
+---
+
 # SecDevAI Fix Command (Alias)
 
 ## Description

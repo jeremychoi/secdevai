@@ -1,3 +1,8 @@
+---
+name: secdevai
+description: AI-powered secure development assistant. Dispatches to review, fix, tool, and export subcommands. Use when the user invokes /secdevai with no subcommand or needs an overview of available security commands.
+---
+
 # SecDevAI Secure Development Assistant Command
 
 ## Description
@@ -30,7 +35,7 @@ Perform AI-powered security code review with optional integration to existing se
 ```
 
 ## What This Command Does
-- Loads `.secdevai/context/security-review.context` for security analysis guidelines
+- Loads `secdevai-review/context/security-review.context` for security analysis guidelines
 - Analyzes code for OWASP Top 10 patterns and common vulnerabilities
 - Optionally integrates with external tools (Bandit, Scorecard)
 - Provides prioritized findings with severity classification
@@ -51,9 +56,9 @@ When user runs `/secdevai`, you should:
 
 2. **Review Command** (ONLY if `review` is explicitly specified):
    - **Load Security Context**:
-     - Always read: `.secdevai/context/security-review.context` for OWASP Top 10 patterns
+     - Always read: `secdevai-review/context/security-review.context` for OWASP Top 10 patterns
      
-    - **Auto-detect WSTG context** (additionally read `.secdevai/context/wstg-testing.context` if ANY condition applies):
+    - **Auto-detect WSTG context** (additionally read `secdevai-review/context/wstg-testing.context` if ANY condition applies):
       - Source code is for a web application, web service, or web site
       - User explicitly mentions: "WSTG", "Web Security Testing Guide", or category numbers (4.1-4.12)
      
@@ -67,7 +72,7 @@ When user runs `/secdevai`, you should:
      - Otherwise (default): Scan entire codebase (respect `.secdevaiignore`)
 
    - **Optional Tool Integration**:
-     - If `tool` specified: Run `.secdevai/scripts/security-review.sh` with tool name
+     - If `tool` specified: Run `secdevai-tool/scripts/security-review.sh` with tool name
      - Parse tool output and synthesize with AI analysis
      - If tool unavailable: Fall back to AI-only analysis
 
@@ -168,7 +173,7 @@ When user runs `/secdevai`, you should:
    - If conditions not met: Explain what's missing (no approved fixes or git not configured)
 
 4. **Tool Command** (if `tool` specified):
-   - Run `.secdevai/scripts/security-review.sh` with tool name (bandit, scorecard, all)
+   - Run `secdevai-tool/scripts/security-review.sh` with tool name (bandit, scorecard, all)
    - Parse tool output and synthesize with AI analysis
    - **Save Results** (after tool execution):
      - Collect tool findings into structured format
@@ -217,9 +222,9 @@ Follow these principles from the security context:
 ## Security Context Sources
 
 This command uses multiple security context files:
-- `.secdevai/context/security-review.context` - OWASP Top 10 patterns (always loaded)
-- `.secdevai/context/wstg-testing.context` - OWASP WSTG v4.2 web app testing patterns (auto-loaded for web code)
-- `.secdevai/context/security-rules.md` - Extended pattern catalog (manual reference)
+- `secdevai-review/context/security-review.context` - OWASP Top 10 patterns (always loaded)
+- `secdevai-review/context/wstg-testing.context` - OWASP WSTG v4.2 web app testing patterns (auto-loaded for web code)
+- `secdevai-review/context/security-rules.md` - Extended pattern catalog (manual reference)
 
 **WSTG Auto-Detection**: The WSTG context automatically loads when reviewing web application, web service, or web site code, or when explicitly requested by mentioning "WSTG" or category numbers (4.1-4.12).
 
@@ -228,8 +233,8 @@ This command uses multiple security context files:
 ## Integration
 
 This command integrates with:
-- `.secdevai/context/` directory for security analysis guidelines
-- `.secdevai/scripts/security-review.sh` for optional tool integration
+- `secdevai-review/context/` directory for security analysis guidelines
+- `secdevai-tool/scripts/security-review.sh` for optional tool integration
 - `.secdevaiignore` for excluding files from scans
 - External tools: Bandit, Scorecard
 
@@ -240,4 +245,3 @@ This command integrates with:
 - **Create backups before applying fixes**
 - **Respect `.secdevaiignore` file**
 - **Cache results to avoid re-scanning**
-

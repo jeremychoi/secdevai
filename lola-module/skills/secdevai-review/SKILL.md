@@ -1,3 +1,8 @@
+---
+name: secdevai-review
+description: Perform AI-powered security code review using OWASP Top 10 and WSTG patterns. Use when reviewing source code, specific files, git commits, or entire codebases for security vulnerabilities. Supports multi-language analysis and severity classification.
+---
+
 # SecDevAI Review Command (Alias)
 
 ## Description
@@ -16,9 +21,9 @@ This is an alias for `/secdevai review`. See the main `/secdevai` command docume
 
 When invoked, this command:
 - **Load Security Context**:
-  - Always read: `.secdevai/context/security-review.context` for OWASP Top 10 patterns
+  - Always read: `secdevai-review/context/security-review.context` for OWASP Top 10 patterns
   
-  - **Auto-detect WSTG context** (additionally read `.secdevai/context/wstg-testing.context` if ANY condition applies):
+  - **Auto-detect WSTG context** (additionally read `secdevai-review/context/wstg-testing.context` if ANY condition applies):
     - Source code is for a web application, web service, or web site
     - User explicitly mentions: "WSTG", "Web Security Testing Guide", or category numbers (4.1-4.12)
 
@@ -28,9 +33,9 @@ When invoked, this command:
 
 ## Security Context Sources
 
-- `.secdevai/context/security-review.context` - OWASP Top 10 patterns (always loaded)
-- `.secdevai/context/wstg-testing.context` - OWASP WSTG v4.2 web app testing patterns (auto-loaded for web code)
-- `.secdevai/context/security-rules.md` - Extended pattern catalog (manual reference)
+- `secdevai-review/context/security-review.context` - OWASP Top 10 patterns (always loaded)
+- `secdevai-review/context/wstg-testing.context` - OWASP WSTG v4.2 web app testing patterns (auto-loaded for web code)
+- `secdevai-review/context/security-rules.md` - Extended pattern catalog (manual reference)
 
 **WSTG Auto-Detection**: The WSTG context automatically loads when reviewing web application code or when explicitly requested.
 
