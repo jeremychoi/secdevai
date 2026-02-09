@@ -342,7 +342,9 @@ run_custom_tool() {
 
 Modify the output format in `lola-module/skills/secdevai-review/context/security-review.context` under the "Output Format" section.
 
-### Adding Language Support
+### Adding Programming Language Support
+
+SecDevAI and AI development tools can support multiple programming languages, even if specific examples for a particular language are not provided. However, supplying language-specific examples will improve the quality of code reviews for those languages, as shown below:
 
 1. Add language-specific patterns to `lola-module/skills/secdevai-review/context/security-review.context`
 2. Update tool integration script in `lola-module/skills/secdevai-tool/scripts/` for language-specific tools
