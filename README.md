@@ -12,9 +12,8 @@ SecDevAI provides context-aware security analysis and powerful features for Curs
 Install SecDevAI to your project. ([`uv`](https://github.com/astral-sh/uv) is required)
 
 ```bash
-uv tool install git+https://github.com/RedHatProductSecurity/secdevai.git
 cd your-code-project
-secdevai .
+uvx git+https://github.com/RedHatProductSecurity/secdevai.git
 ```
 
 Run your preferred AI tool (e.g., Claude Code, Cursor, Gemini-CLI) and type `/secdevai`.
