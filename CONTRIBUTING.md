@@ -4,7 +4,9 @@ Contributions to the project are always welcome. Please feel free to create pull
 
 ## How to Contribute
 
-The primary way to contribute is by updating or adding more contexts into the **`lola-module/`** directory and/or **skills**.
+The primary way to contribute is by updating or adding more contexts in the **`lola-module/`** directory and by extending or improving existing **skills**.
+
+Note: The `lola-module/` directory can package not only skills, but also commands, subagents, and MCP server components.
 
 ### Lola Module (`lola-module/`)
 
