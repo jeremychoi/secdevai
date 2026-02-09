@@ -345,7 +345,7 @@ def process_data(user_input):
 
 ## 🛠️ Tool Integration
 
-If external tools are used (via `.secdevai/scripts/security-review.sh`):
+If external tools are used (via `secdevai-review/scripts/security-review.sh`):
 - Synthesize tool findings with AI analysis
 - Remove duplicates
 - Enhance tool findings with context

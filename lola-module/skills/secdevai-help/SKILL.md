@@ -1,3 +1,8 @@
+---
+name: secdevai-help
+description: Display all available SecDevAI commands, usage examples, aliases, and configuration options. Use when the user asks for help, needs a command reference, or wants to see the typical security review workflow.
+---
+
 # SecDevAI Help Command (Alias)
 
 ## Description

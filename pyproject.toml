@@ -1,5 +1,5 @@
 [project]
-name = "secdevai-cli"
+name = "secdevai"
 version = "0.1.0"
 description = "AI-powered security code review tool with slash command integration"
 readme = "README.md"
@@ -17,8 +17,11 @@ secdevai = "secdevai_cli:main"
 requires = ["hatchling"]
 build-backend = "hatchling.build"
 
+[tool.hatch.build.targets.wheel]
+packages = ["src/secdevai_cli"]
+
 [tool.hatch.build.targets.wheel.shared-data]
-"templates" = "share/secdevai-cli/templates"
+"lola-module" = "share/secdevai/lola-module"
 
 [tool.uv]
 dev-dependencies = [
