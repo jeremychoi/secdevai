@@ -3,33 +3,126 @@ name: secdevai-review
 description: Perform AI-powered security code review using OWASP Top 10 and WSTG patterns. Use when reviewing source code, specific files, git commits, or entire codebases for security vulnerabilities. Supports multi-language analysis and severity classification.
 ---
 
-# SecDevAI Review Command (Alias)
+# SecDevAI Review Command
 
 ## Description
-Alias for `/secdevai review` - Perform security code review.
+Perform AI-powered security code review. Invoked via `/secdevai review` or the `/secdevai-review` alias.
 
 ## Usage
 ```
-/secdevai-review               # Review selected code (if selected) or full codebase scan
-/secdevai-review @ file        # Review specific file
-/secdevai-review last-commit    # Review last commit
-/secdevai-review last-commit --number N  # Review last N commits
+/secdevai review               # Review selected code (if selected) or full codebase scan
+/secdevai review @ file        # Review specific file
+/secdevai review last-commit   # Review last commit
+/secdevai review last-commit --number N  # Review last N commits
+/secdevai-review               # Alias: same as /secdevai review
+/secdevai-review @ file        # Alias: same as /secdevai review @ file
 ```
 
-## What This Command Does
-This is an alias for `/secdevai review`. See the main `/secdevai` command documentation for full details.
+## Expected Response
 
-When invoked, this command:
-- **Load Security Context**:
-  - Always read: `secdevai-review/context/security-review.context` for OWASP Top 10 patterns
-  
-  - **Auto-detect WSTG context** (additionally read `secdevai-review/context/wstg-testing.context` if ANY condition applies):
-    - Source code is for a web application, web service, or web site
-    - User explicitly mentions: "WSTG", "Web Security Testing Guide", or category numbers (4.1-4.12)
+When this skill is invoked, follow these steps in order:
 
-- Analyzes code for OWASP Top 10 patterns and WSTG testing patterns (auto-detected for web apps)
-- Provides prioritized findings with severity classification
-- Supports file, selection, and full codebase analysis
+### Step 1: Load Security Context
+
+- **Always read**: `secdevai-review/context/security-review.context` for OWASP Top 10 patterns
+
+- **Auto-detect WSTG context** (additionally read `secdevai-review/context/wstg-testing.context` if ANY condition applies):
+  - Source code is for a web application, web service, or web site
+  - User explicitly mentions: "WSTG", "Web Security Testing Guide", or category numbers (4.1-4.12)
+
+- **Note**: WSTG patterns enhance web application security analysis with 12 comprehensive testing categories
+
+### Step 2: Detect Scope
+
+Determine what to review (in priority order):
+
+1. If `review last-commit --number N` specified: Review last N commits (requires git)
+2. If `review last-commit` specified: Review last commit (requires git)
+3. If `review @ file` is specified: Review the specified file
+4. If text is selected in UI: Automatically review only the selected code
+5. Otherwise (default): Scan entire codebase (respect `.secdevaiignore`)
+
+### Step 3: Optional Tool Integration
+
+- If `tool` specified: Run `secdevai-tool/scripts/security-review.sh` with tool name
+- Parse tool output and synthesize with AI analysis
+- If tool unavailable: Fall back to AI-only analysis
+
+### Step 4: Perform Analysis
+
+- Scan code for security patterns from loaded context
+- Classify findings by severity (Critical/High/Medium/Low/Info)
+- Reference OWASP categories
+- Provide context-aware explanations
+
+### Step 5: Present Findings
+
+```
+## 🔒 **Security Review Results**
+
+### 🔴 **Critical Findings** (2)
+- [Finding 1 with code reference]
+- [Finding 2 with code reference]
+
+### 🟠 **High Severity** (3)
+- [Finding details]
+
+### 🟡 **Medium Severity** (5)
+- [Finding details]
+
+**Total**: 10 findings across [file/codebase]
+```
+
+### Step 6: Save Results
+
+After presenting findings, collect all findings into structured JSON and export:
+
+```python
+import importlib.util
+from pathlib import Path
+
+# Load the exporter from secdevai-export skill scripts
+script_path = Path("secdevai-export/scripts/results_exporter.py")
+spec = importlib.util.spec_from_file_location("results_exporter", script_path)
+mod = importlib.util.module_from_spec(spec)
+spec.loader.exec_module(mod)
+
+# Collect findings into data structure
+data = {
+    "metadata": {
+        "tool": "secdevai-ai-analysis",
+        "version": "1.0.0",
+        "timestamp": datetime.now().isoformat(),
+        "target_file": "[file path or 'codebase']",
+        "analyzer": "AI Security Review",
+    },
+    "summary": {
+        "total_findings": [count],
+        "critical": [count],
+        "high": [count],
+        "medium": [count],
+        "low": [count],
+        "info": [count],
+    },
+    "findings": [list of finding objects],
+}
+
+# Export to markdown and SARIF
+markdown_path, sarif_path = mod.export_results(data, command_type="review")
+```
+
+- The exporter will prompt the user to confirm the result directory (default: `secdevai-results`)
+- Results are saved with timestamp: `secdevai-review-YYYYMMDD_HHMMSS.md` and `.sarif`
+
+### Step 7: Offer Remediation (if `fix` also specified)
+
+If `fix` is specified alongside review:
+- If `fix severity [level]` specified: Filter fixes by severity (critical, high, medium, low)
+- Show suggested fixes with before/after code
+- Explain security implications
+- Preview changes before applying
+- Require explicit approval
+- After applying fixes, delegate to the `secdevai-fix` skill for result export
 
 ## Security Context Sources
 
@@ -165,9 +258,6 @@ ResultSet rs = stmt.executeQuery();
 - Java: https://docs.oracle.com/javase/tutorial/jdbc/basics/prepared.html
 ```
 
-## Expected Response
-See `/secdevai` command documentation. This alias executes `/secdevai review` with the same behavior.
-
 ## Verification Requirements
 
 **CRITICAL - Line Number Verification**: Before presenting any findings:
@@ -179,9 +269,3 @@ See `/secdevai` command documentation. This alias executes `/secdevai review` wi
 **Format Consistency**:
 - Location: `file:line_start-line_end` must match code block `startLine:endLine:filepath`
 - Read actual files to confirm line numbers, don't rely only on diff context
-
-**Important**: After presenting findings, always save results to Markdown and SARIF formats:
-- Use `secdevai_cli.results_exporter.export_results()` to save results
-- Prompt user to confirm result directory (default: `secdevai-results`)
-- Save both markdown and SARIF files with timestamp
-
