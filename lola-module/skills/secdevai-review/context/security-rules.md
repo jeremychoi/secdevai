@@ -56,8 +56,9 @@ This file can be referenced when needed for specific security pattern details.
 - Classloader security
 - Spring security patterns
 
-### Go (Future)
-- Goroutine security
+### Go
+- **Context file**: `secdevai-review/context/golang-security.context` (auto-loaded for Go code)
+- Goroutine and concurrency security
 - Channel security
 - Interface security
 - Dependency management
