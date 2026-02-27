@@ -31,8 +31,7 @@ When this skill is invoked, follow these steps in order:
   - User explicitly mentions: "WSTG", "Web Security Testing Guide", or category numbers (4.1-4.12)
 
 - **Auto-detect Golang context** (additionally read `secdevai-review/context/golang-security.context` if ANY condition applies):
-  - Source code or files under review are Go (e.g. `.go` files, `go.mod` present)
-  - User explicitly mentions: "Go", "Golang", or "Go application"
+  - Source code or files under review include Go (e.g. `.go` files, `go.mod` present)
 
 - **Note**: WSTG patterns enhance web application security analysis; golang-security.context provides Go-specific vulnerability and weakness patterns
 
