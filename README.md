@@ -1,4 +1,4 @@
-# SecDevAI - Secure Development Assistant Tool
+# SecDevAI - Secure Development Assistant Skills Package
 
 Stop shipping security vulnerabilities. Start Secure Development right now with instant security reviews and fix suggestions right in your preferred AI coding assistant!
 
