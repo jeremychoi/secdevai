@@ -31,23 +31,6 @@ Environment-specific hardening baselines for OCI container images. Load this fil
 
 ---
 
-## Baseline: FedRAMP High / ROSA GovCloud Images
-
-These controls apply to container images deployed in FedRAMP High environments (e.g., ROSA HCP GovCloud).
-
-| Control | NIST 800-53 Mapping | Check | Pass Condition |
-|---|---|---|---|
-| FIPS 140-2/3 validated crypto | SC-13 | Only FIPS-validated modules used for cryptographic operations | OpenSSL in FIPS mode; no non-FIPS TLS cipher suites enabled by default |
-| No default credentials | IA-5 | No hardcoded or default credentials | All credentials must be injected at runtime via secrets management |
-| Audit logging enabled | AU-2, AU-12 | Service produces audit logs in structured format | Logs capture authentication, privilege use, and configuration changes |
-| Least privilege | AC-6 | Minimal Linux capabilities required | No `CAP_SYS_ADMIN` unless explicitly justified |
-| Image provenance | SI-7, CM-14 | Signed image with verifiable SBOM | SBOM covers all OS packages and application dependencies |
-| Vulnerability scan clean | RA-5, SI-2 | No unmitigated HIGH/CRITICAL CVEs at deploy time | All findings either patched or covered by an approved Deviation Request |
-| Secrets management integration | IA-5, SC-28 | Credentials sourced from secrets manager (Vault, K8s Secrets) | No plaintext credentials in env vars, config files, or image layers |
-| TLS enforced | SC-8, SC-23 | All network communications encrypted | TLS 1.2 minimum; TLS 1.3 preferred; no plaintext fallback |
-
----
-
 ## Baseline: CIS Docker Benchmark (Abbreviated)
 
 Key controls from CIS Docker Benchmark v1.6 most relevant to image-level review:
@@ -69,12 +52,12 @@ Key controls from CIS Docker Benchmark v1.6 most relevant to image-level review:
 ```
 **Finding:** Missing hardening control — [control name]
 **Category:** Hardening
-**Severity:** [High if FedRAMP-required | Moderate for general best practice | Low for advisory]
+**Severity:** [High if blocking production deployment | Moderate for general best practice | Low for advisory]
 **Component:** Image: [image name:tag]
 **Description:** The image does not implement [control]. In [deployment context],
-  this means [specific risk]. [NIST control reference if applicable.]
+  this means [specific risk].
 **Evidence:** [Command output or config file content demonstrating the gap]
 **Recommendation:** [Specific remediation — Dockerfile change, runtime flag, or
   configuration update needed to satisfy the control]
-**References:** [CIS Benchmark section | NIST 800-53 control | Red Hat hardening guide URL]
+**References:** [CIS Benchmark section | Red Hat hardening guide URL]
 ```
