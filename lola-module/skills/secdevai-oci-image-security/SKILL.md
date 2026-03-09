@@ -1,11 +1,11 @@
 ---
-name: oci-image-security
+name: secdevai-oci-image-security
 description: Analyze OCI container images for security vulnerabilities, misconfigurations, supply chain risks, and hardening gaps. Use when reviewing container images from Red Hat, Quay.io, Docker Hub, or any OCI-compliant registry. Covers CVE analysis, config security, EOL component detection, credential exposure, and TLS/crypto misconfigurations.
 ---
 
 # OCI Container Image Security Analysis
 
-This skill guides systematic security analysis of OCI container images. It draws from real-world findings produced by AI-assisted image scanning of Red Hat, Quay.io, and Docker Hub official images, and is structured around four core finding categories that consistently yield actionable signal.
+This skill guides systematic security analysis of OCI container images. It is structured around four core finding categories that consistently yield actionable signal when analyzing images from registries such as Red Hat, Quay.io, and Docker Hub.
 
 ## When to Use This Skill
 
@@ -46,7 +46,7 @@ Steps:
 3. Review TLS/crypto configuration for contradictions — services that advertise TLS support but ship with configurations that disable or weaken it.
 4. Look for world-readable credential files, SSH keys, or tokens baked into image layers.
 
-See `./references/config-security-patterns.md` for specific detection patterns and real examples.
+See `./references/config-security-patterns.md` for specific detection patterns and example scenarios.
 
 Key signals to escalate:
 - Default credentials present with no documented change-on-first-use enforcement
@@ -91,7 +91,7 @@ For each finding, produce a structured entry:
 **Description:** [What the issue is and why it matters]
 **Evidence:** [Specific file path, config key, package version, or CVE ID]
 **Recommendation:** [Concrete remediation or mitigation step]
-**References:** [CVE links, upstream advisories, Red Hat Bugzilla if applicable]
+**References:** [CVE links, upstream advisories, vendor bug tracker if applicable]
 ```
 
 ## Scope Considerations

@@ -1,6 +1,6 @@
 # Configuration Security Patterns
 
-Real-world patterns observed in OCI container image security analysis. Load this file during configuration security analysis steps.
+Common patterns observed in OCI container image security analysis. Load this file during configuration security analysis steps.
 
 ---
 
@@ -16,8 +16,8 @@ Real-world patterns observed in OCI container image security analysis. Load this
 - Review service documentation for "default credentials" mentions.
 - Check if a credential change is enforced before the service accepts connections, or if the service is usable with defaults.
 
-**Real example — pcp default credentials:**
-> The `pcp` (Performance Co-Pilot) container image was found to ship with a default empty password for its `pmcd` service with no enforced credential change on first run. An attacker with network access to the pmcd port could authenticate without credentials. This was distinct from a CVE — it was a configuration security finding against the image defaults. Filed as Red Hat Bugzilla RHEL-152222.
+**Example scenario:**
+> A system monitoring service container image ships with a default empty password for its primary daemon, with no enforced credential change on first run. An attacker with network access to the service port can authenticate without credentials. This type of finding is distinct from a CVE — it is a configuration security issue in the image defaults.
 
 **Escalation criteria:**
 - Default credentials are empty or well-known
@@ -35,8 +35,8 @@ Real-world patterns observed in OCI container image security analysis. Load this
 - Look for config keys like `tls_enabled = false`, `ssl = off`, `require_ssl = no`, or equivalent.
 - Check whether TLS is opt-in (must be explicitly enabled) versus opt-out (enabled by default, can be disabled).
 
-**Real example — keylime TLS contradiction:**
-> The `keylime` (TPM-based remote attestation) container image documented TLS as a supported security feature in its README and image labels. However, the default `keylime.conf` shipped in the image had `enable_tls = False` for the verifier component. Deployments following the "quick start" path would run without TLS encryption, contradicting the security claims of the service. This was filed as a config security finding, not a CVE, as no vulnerability was exploited — the misconfiguration was in the defaults.
+**Example scenario:**
+> A security-sensitive service container image documents TLS as a supported feature in its README and image labels. However, the default configuration shipped in the image has TLS disabled for a key component. Deployments following the "quick start" path run without TLS encryption, contradicting the service's security claims. This type of finding is a configuration security issue, not a CVE — the misconfiguration is in the shipped defaults.
 
 **Escalation criteria:**
 - TLS is explicitly advertised as a security feature but off by default

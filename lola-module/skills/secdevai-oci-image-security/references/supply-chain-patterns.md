@@ -1,6 +1,6 @@
 # Supply Chain Detection Patterns
 
-Real-world patterns observed in OCI container image security analysis. Load this file when performing supply chain or CVE analysis steps.
+Common patterns observed in OCI container image security analysis. Load this file when performing supply chain or CVE analysis steps.
 
 ---
 
@@ -13,8 +13,8 @@ Real-world patterns observed in OCI container image security analysis. Load this
 - Use `ldd` to identify dynamically linked libraries; compare versions against EOL dates.
 - Check build metadata and upstream changelogs for vendored dependency pins.
 
-**Real example — stunnel + embedded EOL OpenSSL:**
-> The `stunnel` package in several Red Hat and Quay.io images was found to embed OpenSSL 1.0.x (EOL as of 2019-12-31) as a static dependency, despite the OS-level `openssl` package being a current 3.x version. No CVE had been assigned to `stunnel` for this condition, but the embedded library was vulnerable to multiple known OpenSSL 1.0.x CVEs. The correct attribution is to the `stunnel` package as a supply chain risk, not to the OS openssl package.
+**Example scenario:**
+> A TLS-wrapping utility package in a container image embeds OpenSSL 1.0.x (EOL as of 2019-12-31) as a static dependency, despite the OS-level `openssl` package being a current 3.x version. No CVE is assigned to the utility for this condition, but the embedded library is vulnerable to multiple known OpenSSL 1.0.x CVEs. The correct attribution is to the utility package as a supply chain risk, not to the OS openssl package.
 
 **Escalation criteria:**
 - Embedded library is EOL upstream
@@ -32,8 +32,8 @@ Real-world patterns observed in OCI container image security analysis. Load this
 - Compare embedded version against current libcurl release and known CVE list.
 - Check the upstream package source for vendored `curl/` or `libcurl/` directories.
 
-**Real example — snphost embedded libcurl CVEs:**
-> `snphost` (AMD SNP host attestation tool) was found shipping a vendored libcurl at a version affected by multiple moderate-severity CVEs (including transport-layer and credential handling issues). The system `curl` package was patched; the `snphost` copy was not. This was filed as a supply chain finding against `snphost`, not a generic libcurl finding.
+**Example scenario:**
+> A hardware attestation tool ships a vendored libcurl at a version affected by multiple moderate-severity CVEs (including transport-layer and credential handling issues). The system `curl` package is patched, but the tool's vendored copy is not. This is a supply chain finding against the tool, not a generic libcurl finding.
 
 **Escalation criteria:**
 - Vendored libcurl version differs from system libcurl version
