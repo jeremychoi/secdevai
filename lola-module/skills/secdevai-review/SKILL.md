@@ -33,7 +33,13 @@ When this skill is invoked, follow these steps in order:
 - **Auto-detect Golang context** (additionally read `secdevai-review/context/golang-security.context` if ANY condition applies):
   - Source code or files under review include Go (e.g. `.go` files, `go.mod` present)
 
-- **Note**: WSTG patterns enhance web application security analysis; golang-security.context provides Go-specific vulnerability and weakness patterns
+- **Auto-detect OCI/container context** (additionally read `secdevai-oci-image-security/references/` files if ANY condition applies):
+  - `Dockerfile` or `Containerfile` is present in the repo
+  - Kubernetes manifests (YAML files with `apiVersion`/`kind` fields) are detected
+  - OpenShift deployment configs or templates are present
+  - `docker-compose.yml` or `compose.yaml` exists
+
+- **Note**: WSTG patterns enhance web application security analysis; golang-security.context provides Go-specific vulnerability and weakness patterns; OCI image security references provide container supply chain, configuration, hardening, and EOL detection patterns
 
 ### Step 2: Detect Scope
 
@@ -137,6 +143,8 @@ If `fix` is specified alongside review:
 **WSTG Auto-Detection**: The WSTG context automatically loads when reviewing web application code or when explicitly requested.
 
 **Golang Auto-Detection**: The Golang context automatically loads when reviewing Go source (e.g. `.go` files, `go.mod`) or when the user mentions Go/Golang.
+
+**OCI/Container Auto-Detection**: The OCI image security references automatically load when the repo contains Dockerfiles, Containerfiles, Kubernetes manifests, or docker-compose files.
 
 ## Multi-Language Support
 
