@@ -35,7 +35,7 @@ Detection: `strings <binary> | grep -E "OpenSSL [0-9]\.[0-9]"`
 |---|---|
 | 2.x | 2020-01-01 |
 | 3.8 | 2024-10-07 |
-| 3.9 | 2025-10-05 |
+| 3.9 | 2025-10-31 |
 
 Detection: `python --version`, `python2 --version`, `python3 --version`; check `/usr/bin/python*`
 
