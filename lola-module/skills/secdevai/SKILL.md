@@ -22,6 +22,7 @@ AI-powered secure development assistant that dispatches to specialized sub-skill
 /secdevai tool bandit          # Use specific tool (bandit, scorecard, all)
 /secdevai git-commit           # Commit approved fixes (requires git config and approved fixes)
 /secdevai export json          # Export report (json, markdown, sarif)
+/secdevai oci-image-security   # Analyze OCI container images for security issues
 ```
 
 ## Aliases
@@ -32,6 +33,7 @@ AI-powered secure development assistant that dispatches to specialized sub-skill
 /secdevai-report               # Generate security report
 /secdevai-tool                 # Use specific tool (alias for /secdevai tool)
 /secdevai-export               # Export report (alias for /secdevai export)
+/secdevai-oci-image-security   # Analyze OCI container images for security issues
 ```
 
 ## Command Dispatch
@@ -57,7 +59,10 @@ When user runs `/secdevai`, route to the appropriate sub-skill:
 5. **`export`**: **Delegate to the `secdevai-export` skill.**
    The export skill handles converting findings to Markdown and SARIF formats.
 
-6. **`git-commit`**:
+6. **`oci-image-security`**: **Delegate to the `secdevai-oci-image-security` skill.**
+   The OCI image security skill analyzes container images for CVE/package vulnerabilities, configuration security issues, supply chain risks, and hardening gaps. Use when reviewing Dockerfiles, Containerfiles, or OCI images from any registry.
+
+7. **`git-commit`**:
    - Only proceed if there are approved fixes that have been applied
    - Verify git is configured (check for git repository and user config)
    - If conditions met: Create a commit with descriptive message about security fixes
@@ -88,7 +93,8 @@ This command integrates with:
 - `secdevai-tool/scripts/security-review.sh` for optional tool integration
 - `secdevai-export/scripts/results_exporter.py` for result export
 - `.secdevaiignore` for excluding files from scans
-- External tools: Bandit, Scorecard
+- `secdevai-oci-image-security/references/` for OCI container image security patterns
+- External tools: Bandit, Scorecard, Trivy, Grype
 
 ## Important Notes
 
