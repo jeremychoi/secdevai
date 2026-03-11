@@ -5,6 +5,7 @@ Exports security review results to Markdown and SARIF formats.
 """
 
 import json
+import os
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
@@ -18,31 +19,50 @@ console = Console()
 SARIF_VERSION = "2.1.0"
 SARIF_SCHEMA = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
 
+# Allow a persistent base directory via environment variable.
+# Set SECDEVAI_RESULTS_DIR in your shell profile to avoid retyping it each run.
+# Example: export SECDEVAI_RESULTS_DIR=~/my-project/security-results
+_ENV_RESULTS_DIR = "SECDEVAI_RESULTS_DIR"
+_DEFAULT_RESULTS_DIR = "secdevai-results"
 
-def confirm_result_directory(default: str = "secdevai-results") -> Path:
+
+def confirm_result_directory(default: str = _DEFAULT_RESULTS_DIR) -> Path:
     """
     Prompt user to confirm result directory.
-    
+
+    Checks SECDEVAI_RESULTS_DIR env var first; uses it as the default when set
+    so users can configure a persistent base directory without retyping it each run.
+
     Args:
-        default: Default directory name
-        
+        default: Fallback default directory name (used when env var is not set)
+
     Returns:
         Path object for the result directory
     """
-    console.print(f"\n[bold blue]Save results to directory:[/bold blue]")
+    env_override = os.environ.get(_ENV_RESULTS_DIR)
+    effective_default = env_override if env_override else default
+
+    if env_override:
+        console.print(
+            f"\n[bold blue]Save results to directory:[/bold blue] "
+            f"[dim](from $SECDEVAI_RESULTS_DIR)[/dim]"
+        )
+    else:
+        console.print(f"\n[bold blue]Save results to directory:[/bold blue]")
+
     result_dir_input = Prompt.ask(
-        f"Result directory",
-        default=default,
+        "Result directory",
+        default=effective_default,
         show_default=True,
     )
-    
+
     result_dir = Path(result_dir_input).expanduser().resolve()
-    
+
     # Create directory if it doesn't exist
     result_dir.mkdir(parents=True, exist_ok=True)
-    
+
     console.print(f"[green]✓[/green] Results will be saved to: {result_dir}\n")
-    
+
     return result_dir
 
 
