@@ -19,9 +19,8 @@ def fake_lola_module(tmp_path: Path) -> Path:
       skills/secdevai/SKILL.md
       skills/secdevai-export/SKILL.md
       skills/secdevai-export/scripts/results_exporter.py
-      skills/secdevai-tool/scripts/security-review.sh
+      skills/secdevai-tool/scripts/container-run.sh
       skills/secdevai-tool/SKILL.md
-      skills/secdevai-review/context/security-rules.md
       skills/secdevai-review/SKILL.md
     """
     module_dir = tmp_path / "lola-module"
@@ -40,21 +39,18 @@ def fake_lola_module(tmp_path: Path) -> Path:
     export_scripts.mkdir()
     (export_scripts / "results_exporter.py").write_text("# stub exporter\n")
 
-    # skills/secdevai-tool/SKILL.md + scripts/security-review.sh
+    # skills/secdevai-tool/SKILL.md + scripts/container-run.sh
     tool_dir = module_dir / "skills" / "secdevai-tool"
     tool_dir.mkdir(parents=True)
     (tool_dir / "SKILL.md").write_text("# Tool SKILL\n")
     script_dir = tool_dir / "scripts"
     script_dir.mkdir()
-    (script_dir / "security-review.sh").write_text("#!/bin/bash\necho hello\n")
+    (script_dir / "container-run.sh").write_text("#!/bin/bash\necho 'stub'\n")
 
-    # skills/secdevai-review/SKILL.md + context/security-rules.md
+    # skills/secdevai-review/SKILL.md
     review_dir = module_dir / "skills" / "secdevai-review"
     review_dir.mkdir(parents=True)
     (review_dir / "SKILL.md").write_text("# Review SKILL\n")
-    context_dir = review_dir / "context"
-    context_dir.mkdir()
-    (context_dir / "security-rules.md").write_text("# Rules\n")
 
     return module_dir
 

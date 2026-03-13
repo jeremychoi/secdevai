@@ -45,7 +45,8 @@ secdevai --help
 `/secdevai` dispatches to sub-skills (expandable):
 - `secdevai-review` -- Security review using OWASP Top 10 and WSTG patterns (context files in `context/`)
 - `secdevai-fix` -- Apply fixes with explicit user approval
-- `secdevai-tool` -- Run external tools (Bandit, Scorecard) via `scripts/security-review.sh`
+- `secdevai-tool` -- Run external tools
+- `secdevai-oci-image-security` -- Scan OCI/container images for CVEs and misconfigurations
 - `secdevai-export` -- Export findings to Markdown/SARIF via `scripts/results_exporter.py`
 - `secdevai-help` -- Show available commands
 
