@@ -268,6 +268,6 @@ class TestDeployIdempotency:
         deployer = ModuleDeployer(fake_lola_module)
         deployer.deploy(target_project)
 
-        # Spot-check: deeply nested context dir should exist
-        review_ctx = target_project / ".cursor" / "skills" / "secdevai-review" / "context"
-        assert review_ctx.is_dir()
+        # Spot-check: deeply nested scripts dir should exist
+        tool_scripts = target_project / ".cursor" / "skills" / "secdevai-tool" / "scripts"
+        assert tool_scripts.is_dir()

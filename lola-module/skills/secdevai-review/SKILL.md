@@ -167,7 +167,6 @@ If `fix` is specified alongside review:
 - `secdevai-review/context/security-review.context` - OWASP Top 10 patterns (always loaded)
 - `secdevai-review/context/wstg-testing.context` - OWASP WSTG v4.2 web app testing patterns (auto-loaded for web code)
 - `secdevai-review/context/golang-security.context` - Go-specific vulnerabilities and weaknesses (auto-loaded for Go code)
-- `secdevai-review/context/security-rules.md` - Extended pattern catalog (manual reference)
 
 **WSTG Auto-Detection**: The WSTG context automatically loads when reviewing web application code or when explicitly requested.
 
