@@ -323,19 +323,15 @@ Add or update security patterns in `lola-module/skills/secdevai-review/context/s
 
 ### Adding New Tools
 
-Edit `lola-module/skills/secdevai-tool/scripts/security-review.sh` to add support for new security tools:
+Add a new row to the **Available Tools** table in `lola-module/skills/secdevai-tool/SKILL.md` and a corresponding run example in Step 2. No changes to `scripts/container-run.sh` are needed — it is a generic wrapper.
+
+```markdown
+| custom-tool | https://github.com/org/custom-tool | `ghcr.io/org/custom-tool:latest` | Python |
+```
 
 ```bash
-run_custom_tool() {
-    if ! command -v custom-tool &> /dev/null; then
-        return 1
-    fi
-    
-    # Parse tool output and add findings
-    custom-tool --format json | jq -r '...' | while read ...; do
-        add_finding ...
-    done
-}
+# Step 2 example
+scripts/container-run.sh ghcr.io/org/custom-tool:latest --format json /src
 ```
 
 ### Customizing Output Format

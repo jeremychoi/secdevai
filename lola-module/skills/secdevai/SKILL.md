@@ -89,7 +89,7 @@ This command uses multiple security context files:
 
 This command integrates with:
 - `secdevai-review/context/` directory for security analysis guidelines
-- `secdevai-tool/scripts/security-review.sh` for optional tool integration
+- `secdevai-tool` for optional tool integration via containerized runners
 - `secdevai-export/scripts/results_exporter.py` for result export
 - `.secdevaiignore` for excluding files from scans
 - `secdevai-oci-image-security/references/` for OCI container image security patterns

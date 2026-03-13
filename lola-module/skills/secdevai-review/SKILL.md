@@ -82,7 +82,7 @@ Tip: To review an excluded file, remove its pattern from .secdevaiignore.
 
 ### Step 4: Optional Tool Integration
 
-- If `tool` specified: Run `secdevai-tool/scripts/security-review.sh` with tool name
+- If `tool` specified: Run the tool via `secdevai-tool` (see `secdevai-tool/scripts/container-run.sh`)
 - Parse tool output and synthesize with AI analysis
 - If tool unavailable: Fall back to AI-only analysis
 
