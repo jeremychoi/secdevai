@@ -19,7 +19,7 @@ This is an alias for `/secdevai export`. See the main `/secdevai` command docume
 
 When invoked, this command:
 - Converts structured security findings into a Markdown report and SARIF file
-- Prompts the user to confirm the result directory (default: `secdevai-results`)
+- Prompts the user to confirm the result directory (default: `secdevai-results`, or `$SECDEVAI_RESULTS_DIR` if set)
 - Saves timestamped files: `secdevai-<type>-YYYYMMDD_HHMMSS.md` and `.sarif`
 
 ## Script
@@ -80,6 +80,7 @@ The `data` dictionary should follow this structure:
 See `/secdevai` command documentation. This alias executes `/secdevai export` with the same behavior.
 
 **Important**:
-- The exporter will prompt the user to confirm the result directory (default: `secdevai-results`)
+- The exporter prompts the user to confirm the result directory (default: `secdevai-results`)
+- Set `SECDEVAI_RESULTS_DIR` in your shell profile to use a custom base directory without retyping it each run — the prompt will show your value as the default. This env var is shared by all secdevai commands (`review`, `fix`, `tool`, `dast`).
 - Results are saved with timestamp: `secdevai-<type>-YYYYMMDD_HHMMSS.md` and `.sarif`
 - SARIF output conforms to SARIF v2.1.0 schema for integration with GitHub Code Scanning, VS Code SARIF Viewer, etc.
