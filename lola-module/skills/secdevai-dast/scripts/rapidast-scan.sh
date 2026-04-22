@@ -23,7 +23,7 @@ ACTIVE_SCAN=false
 # Falls back to ./secdevai-results if not set.
 OUTPUT_DIR="${SECDEVAI_RESULTS_DIR:-./secdevai-results}/dast"
 # RapiDAST container image (pin tag here when upgrading).
-RAPIDAST_IMAGE="redhatproductsecurity/rapidast:2.13.0"
+RAPIDAST_IMAGE="quay.io/redhatproductsecurity/rapidast:2.13.0"
 
 # ── Argument parsing ──────────────────────────────────────────────────────────
 while [[ $# -gt 0 ]]; do

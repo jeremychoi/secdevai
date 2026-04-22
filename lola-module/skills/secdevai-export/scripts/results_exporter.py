@@ -336,8 +336,37 @@ def convert_to_markdown(data: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+# Headers that must never appear in exported artifacts.
+# These can carry credentials, session tokens, or other secrets.
+_REDACTED_HEADERS = frozenset(
+    {
+        "authorization",
+        "cookie",
+        "set-cookie",
+        "proxy-authorization",
+        "x-api-key",
+        "x-auth-token",
+        "x-csrf-token",
+        "x-forwarded-authorization",
+    }
+)
+_REDACTED_PLACEHOLDER = "[redacted]"
+
+
+def _redact_headers(headers: Dict[str, Any]) -> Dict[str, Any]:
+    """Return a copy of *headers* with sensitive values replaced."""
+    return {
+        name: (_REDACTED_PLACEHOLDER if name.lower() in _REDACTED_HEADERS else value)
+        for name, value in headers.items()
+    }
+
+
 def _build_web_request(req: Dict[str, Any]) -> Dict[str, Any]:
-    """Build a SARIF webRequest object (spec section 3.46)."""
+    """Build a SARIF webRequest object (spec section 3.46).
+
+    Sensitive headers (Authorization, Cookie, etc.) are redacted.
+    Request bodies are omitted to avoid leaking payload data.
+    """
     sarif_req: Dict[str, Any] = {}
     if "protocol" in req:
         sarif_req["protocol"] = req["protocol"]
@@ -348,16 +377,19 @@ def _build_web_request(req: Dict[str, Any]) -> Dict[str, Any]:
     if "target" in req:
         sarif_req["target"] = req["target"]
     if "headers" in req:
-        sarif_req["headers"] = req["headers"]
+        sarif_req["headers"] = _redact_headers(req["headers"])
     if "parameters" in req:
         sarif_req["parameters"] = req["parameters"]
-    if "body" in req and req["body"]:
-        sarif_req["body"] = {"text": req["body"]}
+    # Bodies are intentionally excluded — they can contain credentials or PII.
     return sarif_req
 
 
 def _build_web_response(resp: Dict[str, Any]) -> Dict[str, Any]:
-    """Build a SARIF webResponse object (spec section 3.47)."""
+    """Build a SARIF webResponse object (spec section 3.47).
+
+    Sensitive headers (Set-Cookie, etc.) are redacted.
+    Response bodies are omitted to avoid leaking application data.
+    """
     sarif_resp: Dict[str, Any] = {}
     if "protocol" in resp:
         sarif_resp["protocol"] = resp["protocol"]
@@ -368,9 +400,8 @@ def _build_web_response(resp: Dict[str, Any]) -> Dict[str, Any]:
     if "reasonPhrase" in resp:
         sarif_resp["reasonPhrase"] = resp["reasonPhrase"]
     if "headers" in resp:
-        sarif_resp["headers"] = resp["headers"]
-    if "body" in resp and resp["body"]:
-        sarif_resp["body"] = {"text": resp["body"]}
+        sarif_resp["headers"] = _redact_headers(resp["headers"])
+    # Bodies are intentionally excluded — they can contain credentials or PII.
     return sarif_resp
 
 
