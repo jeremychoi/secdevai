@@ -128,7 +128,7 @@ Findings:
 | **DISPUTED** | Keep finding, add "[Needs Manual Review]" tag and the dispute reasoning. |
 | **REJECTED** | Remove from results. Log to skipped findings with rejection reason. |
 
-For all retained findings, enrich the output with: CVSS vector string, CVSS numeric score, Red Hat severity, and exploitability verdict.
+For all retained findings, enrich the output with: CVSS vector string, CVSS numeric score, Severity, and exploitability verdict.
 
 **Report only valid, exploitable findings** in the final output. Non-exploitable findings that are still valid issues should be listed in a separate "Informational / Not Exploitable" section with the explanation from the validation skill.
 
@@ -136,7 +136,7 @@ For all retained findings, enrich the output with: CVSS vector string, CVSS nume
 
 ### Step 6: Present Findings
 
-Present only validated, exploitable findings. Group by Red Hat severity:
+Present only validated, exploitable findings. Group by Severity:
 
 ```
 ## 🔒 **Security Review Results**
@@ -160,7 +160,7 @@ Present only validated, exploitable findings. Group by Red Hat severity:
 ```
 
 Each finding should include:
-- `Red Hat Severity`: Critical / Important / Moderate / Low
+- `Severity`: Critical / Important / Moderate / Low
 - `CVSS Vector`: CVSS:3.1/AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X
 - `CVSS Score`: numeric score
 - `Exploitability`: Exploitable / Conditionally exploitable / Not exploitable
@@ -355,7 +355,7 @@ ResultSet rs = stmt.executeQuery();
 **Location**: `network.c:87-89`
 **Language**: C
 **CWE**: CWE-787 (Out-of-bounds Write)
-**Red Hat Severity**: Critical
+**Severity**: Critical
 **CVSS Vector**: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
 **CVSS Score**: 9.8
 **Exploitability**: Exploitable — network-reachable parser with no bounds checking

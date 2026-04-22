@@ -23,6 +23,7 @@ AI-powered secure development assistant that dispatches to specialized sub-skill
 /secdevai dast                 # DAST scan web app/API using RapiDAST (auto-detects Dockerfile/OpenAPI)
 /secdevai dast --url <URL>     # DAST scan a specific URL (legal warning applies)
 /secdevai git-commit           # Commit approved fixes (requires git config and approved fixes)
+/secdevai validate             # Validate findings from prior review (exploitability, CVSS, severity)
 /secdevai export json          # Export report (json, markdown, sarif)
 /secdevai oci-image-security   # Analyze OCI container images for security issues
 ```
@@ -34,6 +35,7 @@ AI-powered secure development assistant that dispatches to specialized sub-skill
 /secdevai-review               # Review code (alias for /secdevai review)
 /secdevai-report               # Generate security report
 /secdevai-tool                 # Use specific tool (alias for /secdevai tool)
+/secdevai-validate             # Validate findings (alias for /secdevai validate)
 /secdevai-dast                 # DAST scan (alias for /secdevai dast)
 /secdevai-export               # Export report (alias for /secdevai export)
 /secdevai-oci-image-security   # Analyze OCI container images for security issues
@@ -59,16 +61,19 @@ When user runs `/secdevai`, route to the appropriate sub-skill:
 4. **`tool`**: **Delegate to the `secdevai-tool` skill.**
    The tool skill handles external tool execution (Bandit, Scorecard), output parsing, AI synthesis, and result export.
 
-5. **`export`**: **Delegate to the `secdevai-export` skill.**
+5. **`validate`**: **Delegate to the `secdevai-validate` skill.**
+   The validate skill checks exploitability, calibrates severity against Red Hat's classification, and produces CVSS v3.1 analysis. Typically invoked automatically by `secdevai-review` as a subagent, but can be run manually to re-validate prior results.
+
+6. **`export`**: **Delegate to the `secdevai-export` skill.**
    The export skill handles converting findings to Markdown and SARIF formats.
 
-6. **`oci-image-security`**: **Delegate to the `secdevai-oci-image-security` skill.**
+7. **`oci-image-security`**: **Delegate to the `secdevai-oci-image-security` skill.**
    The OCI image security skill analyzes container images for CVE/package vulnerabilities, configuration security issues, supply chain risks, and hardening gaps. Use when reviewing Dockerfiles, Containerfiles, or OCI images from any registry.
 
-7. **`dast`**: **Delegate to the `secdevai-dast` skill.**
+8. **`dast`**: **Delegate to the `secdevai-dast` skill.**
    The DAST skill performs dynamic application security testing using RapiDAST. It auto-detects Dockerfile/Compose for container setup, discovers OpenAPI specs, handles authentication, runs passive then optionally active scanning, and exports SARIF results. Crucially, it also **traces each DAST finding back to the exact source file and line that is the root cause** — bridging the gap between a runtime HTTP observation (e.g. "SQL injection detected at `/api/pets/name/<param>`") and the vulnerable code that produced it (e.g. raw f-string SQL construction in `db.py:32`). The correlation report is saved alongside the SARIF as `source-correlation.md`.
 
-8. **`git-commit`**:
+9. **`git-commit`**:
    - Only proceed if there are approved fixes that have been applied
    - Verify git is configured (check for git repository and user config)
    - If conditions met: Create a commit with descriptive message about security fixes
@@ -95,6 +100,7 @@ This command uses multiple security context files:
 
 This command integrates with:
 - `secdevai-review/context/` directory for security analysis guidelines
+- `secdevai-validate` for finding validation, exploitability checks, CVSS scoring, and Red Hat severity calibration
 - `secdevai-tool` for optional tool integration via containerized runners
 - `secdevai-dast/scripts/rapidast-scan.sh` for DAST scanning via RapiDAST (produces SARIF + `source-correlation.md`)
 - `secdevai-export/scripts/results_exporter.py` for result export
