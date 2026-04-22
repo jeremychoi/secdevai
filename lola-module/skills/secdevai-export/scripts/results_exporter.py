@@ -10,11 +10,6 @@ from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Optional
 
-from rich.console import Console
-from rich.prompt import Prompt
-
-console = Console()
-
 # SARIF schema version
 SARIF_VERSION = "2.1.0"
 SARIF_SCHEMA = "https://raw.githubusercontent.com/oasis-tcs/sarif-spec/master/Schemata/sarif-schema-2.1.0.json"
@@ -43,25 +38,19 @@ def confirm_result_directory(default: str = _DEFAULT_RESULTS_DIR) -> Path:
     effective_default = env_override if env_override else default
 
     if env_override:
-        console.print(
-            f"\n[bold blue]Save results to directory:[/bold blue] "
-            f"[dim](from $SECDEVAI_RESULTS_DIR)[/dim]"
-        )
+        print("\nSave results to directory: (from $SECDEVAI_RESULTS_DIR)")
     else:
-        console.print(f"\n[bold blue]Save results to directory:[/bold blue]")
+        print("\nSave results to directory:")
 
-    result_dir_input = Prompt.ask(
-        "Result directory",
-        default=effective_default,
-        show_default=True,
-    )
+    prompt = f"Result directory [{effective_default}]: "
+    result_dir_input = input(prompt).strip() or effective_default
 
     result_dir = Path(result_dir_input).expanduser().resolve()
 
     # Create directory if it doesn't exist
     result_dir.mkdir(parents=True, exist_ok=True)
 
-    console.print(f"[green]✓[/green] Results will be saved to: {result_dir}\n")
+    print(f"✓ Results will be saved to: {result_dir}\n")
 
     return result_dir
 
@@ -497,13 +486,13 @@ def export_results(
     markdown_content = convert_to_markdown(data)
     markdown_path = timestamp_dir / f"{base_name}.md"
     markdown_path.write_text(markdown_content, encoding="utf-8")
-    console.print(f"[green]✓[/green] Markdown report saved: {markdown_path}")
+    print(f"✓ Markdown report saved: {markdown_path}")
     
     # Save SARIF
     sarif_content = convert_to_sarif(data)
     sarif_path = timestamp_dir / f"{base_name}.sarif"
     sarif_path.write_text(json.dumps(sarif_content, indent=2), encoding="utf-8")
-    console.print(f"[green]✓[/green] SARIF report saved: {sarif_path}")
+    print(f"✓ SARIF report saved: {sarif_path}")
     
     return markdown_path, sarif_path
 
