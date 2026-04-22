@@ -316,6 +316,7 @@ def process_data(user_input):
 
 **Location**: `file.py:42`
 **OWASP Category**: A03: Injection
+**CWE**: CWE-89 (when applicable — always include CWE ID for CWE/SANS Top 25 entries)
 **Description**: [Clear explanation]
 
 **Vulnerable Code**:
@@ -333,6 +334,7 @@ def process_data(user_input):
 **References**:
 - OWASP: [link]
 - CWE: [link]
+- SANS Top 25: https://www.sans.org/top25-software-errors (when finding maps to a Top 25 entry)
 ```
 
 ### Prioritization

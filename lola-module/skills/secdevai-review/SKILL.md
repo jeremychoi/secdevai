@@ -1,6 +1,6 @@
 ---
 name: secdevai-review
-description: Perform AI-powered security code review using OWASP Top 10 and WSTG patterns. Use when reviewing source code, specific files, git commits, or entire codebases for security vulnerabilities. Supports multi-language analysis and severity classification.
+description: Perform AI-powered security code review using OWASP Top 10, CWE/SANS Top 25, and WSTG patterns. Use when reviewing source code, specific files, git commits, or entire codebases for security vulnerabilities. Supports web and non-web code (C/C++, Go, Rust, etc.), multi-language analysis, severity classification, and automated finding validation via subagent.
 ---
 
 # SecDevAI Review Command
@@ -65,6 +65,12 @@ Tip: To review an excluded file, remove its pattern from .secdevaiignore.
 
 - **Always read**: `secdevai-review/context/security-review.context` for OWASP Top 10 patterns
 
+- **Auto-detect CWE/SANS Top 25 native code context** (additionally read `secdevai-review/context/cwe-top25-native.context` if ANY condition applies):
+  - Source code includes C (`.c`, `.h`), C++ (`.cpp`, `.cc`, `.cxx`, `.hpp`), or Rust (`.rs`) files
+  - `Makefile`, `CMakeLists.txt`, `meson.build`, `Cargo.toml`, or `*.sln`/`*.vcxproj` build files are present
+  - User explicitly mentions: "CWE", "SANS Top 25", "buffer overflow", "memory safety", "native code", "systems code"
+  - Assembly (`.s`, `.asm`) files or FFI/JNI bindings are detected
+
 - **Auto-detect WSTG context** (additionally read `secdevai-review/context/wstg-testing.context` if ANY condition applies):
   - Source code is for a web application, web service, or web site
   - User explicitly mentions: "WSTG", "Web Security Testing Guide", or category numbers (4.1-4.12)
@@ -78,7 +84,7 @@ Tip: To review an excluded file, remove its pattern from .secdevaiignore.
   - OpenShift deployment configs or templates are present
   - `docker-compose.yml` or `compose.yaml` exists
 
-- **Note**: WSTG patterns enhance web application security analysis; golang-security.context provides Go-specific vulnerability and weakness patterns; OCI image security references provide container supply chain, configuration, hardening, and EOL detection patterns
+- **Note**: CWE/SANS Top 25 patterns cover memory safety, integer overflow, race conditions, and privilege management for native/systems code; WSTG patterns enhance web application security analysis; golang-security.context provides Go-specific vulnerability and weakness patterns; OCI image security references provide container supply chain, configuration, hardening, and EOL detection patterns
 
 ### Step 4: Optional Tool Integration
 
@@ -88,10 +94,52 @@ Tip: To review an excluded file, remove its pattern from .secdevaiignore.
 
 ### Step 5: Perform Analysis
 
-- Scan code for security patterns from loaded context
+- Scan code for security patterns from loaded context (OWASP Top 10 and/or CWE/SANS Top 25 depending on loaded contexts)
 - Classify findings by severity (Critical/High/Medium/Low/Info)
-- Reference OWASP categories
+- Reference OWASP categories and/or CWE IDs
 - Provide context-aware explanations
+
+### Step 5.5: Validate Findings via Subagent
+
+**Purpose**: Reduce false positives by dispatching a validation subagent to independently verify each finding against the actual code.
+
+For each finding from Step 5, dispatch a subagent (using parallel task execution when the platform supports it) with the following prompt template:
+
+```
+You are a security finding validator. Verify whether the following finding is a TRUE positive or FALSE positive by reading the actual source code.
+
+Finding:
+- Type: [vulnerability type]
+- CWE/OWASP: [ID]
+- Location: [file:line]
+- Description: [finding description]
+
+Validation steps:
+1. Read the source file at the specified location
+2. Check if the vulnerable pattern actually exists at that location
+3. Check if mitigations are already in place (e.g., bounds checks, sanitization, safe wrappers, compiler flags)
+4. Check surrounding context — is the code reachable from untrusted input?
+5. For memory safety findings (CWE-787, CWE-416, CWE-125, CWE-476, CWE-119, CWE-190): verify the exact buffer sizes, allocation patterns, and control flow
+6. For concurrency findings (CWE-362): verify shared state and synchronization primitives
+
+Return a JSON object:
+{
+  "finding_id": "<sequential number>",
+  "verdict": "true_positive" | "false_positive" | "needs_review",
+  "confidence": "high" | "medium" | "low",
+  "reasoning": "<1-2 sentence explanation>",
+  "mitigations_found": ["<list any existing mitigations>"]
+}
+```
+
+**Processing validation results**:
+- **true_positive (high confidence)**: Keep finding as-is
+- **true_positive (medium/low confidence)**: Keep finding, add note about confidence level
+- **false_positive (high confidence)**: Remove finding from results, log to skipped findings
+- **false_positive (medium/low confidence)**: Keep finding but downgrade severity by one level and add "[Needs Manual Review]" tag
+- **needs_review**: Keep finding, add "[Needs Manual Review]" tag
+
+**If subagent dispatch is unavailable** (e.g., platform does not support parallel task execution): perform the validation inline by re-reading each flagged location and applying the same verification steps. Still annotate any uncertain findings with "[Needs Manual Review]".
 
 ### Step 6: Present Findings
 
@@ -165,8 +213,11 @@ If `fix` is specified alongside review:
 ## Security Context Sources
 
 - `secdevai-review/context/security-review.context` - OWASP Top 10 patterns (always loaded)
+- `secdevai-review/context/cwe-top25-native.context` - CWE/SANS Top 25 patterns for native/systems code (auto-loaded for C/C++/Rust)
 - `secdevai-review/context/wstg-testing.context` - OWASP WSTG v4.2 web app testing patterns (auto-loaded for web code)
 - `secdevai-review/context/golang-security.context` - Go-specific vulnerabilities and weaknesses (auto-loaded for Go code)
+
+**CWE/SANS Top 25 Auto-Detection**: The native code context automatically loads when reviewing C, C++, Rust, or other compiled/systems code, or when the user mentions CWE, SANS Top 25, buffer overflows, or memory safety.
 
 **WSTG Auto-Detection**: The WSTG context automatically loads when reviewing web application code or when explicitly requested.
 
@@ -181,6 +232,9 @@ If `fix` is specified alongside review:
 ### Language Detection and Adaptation
 
 1. **Detect the Language**: Identify the programming language from file extension, syntax, or imports
+   - C: `.c`, `.h`, `#include <stdio.h>`, `malloc`, `free`
+   - C++: `.cpp`, `.cc`, `.cxx`, `.hpp`, `.hxx`, `#include <iostream>`, `std::`, `class`, `template`
+   - Rust: `.rs`, `use`, `fn`, `impl`, `unsafe`, `Cargo.toml`
    - Python: `.py`, imports like `import flask`, `from django`
    - JavaScript/TypeScript: `.js`, `.ts`, `.jsx`, `.tsx`, `require()`, `import from`
    - Java: `.java`, `import`, `class`, `public static void`
@@ -188,7 +242,6 @@ If `fix` is specified alongside review:
    - Ruby: `.rb`, `require`, `def`, `class`
    - PHP: `.php`, `<?php`, `namespace`
    - C#: `.cs`, `using`, `namespace`
-   - Rust: `.rs`, `use`, `fn`, `impl`
 
 2. **Translate Security Patterns**: Apply the same security principle but with language-specific syntax
 
@@ -228,6 +281,9 @@ If `fix` is specified alongside review:
    ```
 
 3. **Use Language-Specific Frameworks and Idioms**:
+   - C: POSIX APIs, OpenSSL, safe string functions (`strlcpy`/`snprintf`), SEI CERT C patterns
+   - C++: STL containers, smart pointers (`std::unique_ptr`, `std::shared_ptr`), RAII, C++ Core Guidelines
+   - Rust: Ownership/borrowing (safe Rust), `unsafe` blocks, `std::fs`, `tokio` patterns
    - Python: Django ORM, Flask, FastAPI patterns
    - JavaScript: Express.js, Next.js, React patterns
    - Java: Spring Security, Jakarta EE patterns
@@ -247,6 +303,21 @@ If `fix` is specified alongside review:
    - Only the syntax and remediation differ
 
 ### Example Language Adaptations
+
+**Buffer Overflow Prevention** (CWE-787, native code):
+- C: Use `snprintf` instead of `sprintf`, `strncpy`/`strlcpy` instead of `strcpy`, `fgets` instead of `gets`
+- C++: Prefer `std::string`, `std::vector`, `std::array` over raw buffers; use `.at()` for bounds-checked access
+- Rust: Safe Rust prevents buffer overflows at compile time; audit `unsafe` blocks
+
+**Memory Management** (CWE-416, CWE-415, native code):
+- C: Nullify pointers after `free()`, use static analysis (Coverity, cppcheck)
+- C++: Use smart pointers (`std::unique_ptr`, `std::shared_ptr`), RAII for resource management
+- Rust: Ownership system prevents use-after-free; audit `unsafe` blocks and raw pointer usage
+
+**Integer Overflow** (CWE-190, native code):
+- C: Check before arithmetic: `if (a > SIZE_MAX - b)`, use safe integer libraries
+- C++: Use `<limits>`, `std::numeric_limits`, or safe integer libraries like SafeInt
+- Rust: Debug builds panic on overflow; use `checked_add()`, `saturating_add()` in release
 
 **XSS Prevention**:
 - Python/Flask: Use Jinja2 auto-escaping, `escape()`, `Markup()`
@@ -268,7 +339,9 @@ If `fix` is specified alongside review:
 
 ### Response Format for Non-Python Code
 
-When reviewing non-Python code, structure your findings exactly the same way but with appropriate language examples:
+When reviewing non-Python code, structure your findings exactly the same way but with appropriate language examples.
+
+**Web/managed language example (OWASP)**:
 
 ```
 ## 🔴 **Critical: SQL Injection**
@@ -276,6 +349,7 @@ When reviewing non-Python code, structure your findings exactly the same way but
 **Location**: `UserController.java:42-45`
 **Language**: Java
 **OWASP Category**: A03: Injection
+**CWE**: CWE-89
 
 **Vulnerable Code**:
 ```java
@@ -288,7 +362,6 @@ ResultSet rs = stmt.executeQuery(query);
 
 **Remediation**:
 ```java
-// Use PreparedStatement with parameterized queries
 String query = "SELECT * FROM users WHERE username = ?";
 PreparedStatement stmt = connection.prepareStatement(query);
 stmt.setString(1, username);
@@ -297,7 +370,38 @@ ResultSet rs = stmt.executeQuery();
 
 **References**:
 - OWASP: https://owasp.org/www-community/attacks/SQL_Injection
-- Java: https://docs.oracle.com/javase/tutorial/jdbc/basics/prepared.html
+- CWE-89: https://cwe.mitre.org/data/definitions/89.html
+```
+
+**Native/systems code example (CWE/SANS Top 25)**:
+
+```
+## 🔴 **Critical: Buffer Overflow (CWE-787)**
+
+**Location**: `network.c:87-89`
+**Language**: C
+**CWE**: CWE-787 (Out-of-bounds Write)
+**Validation**: ✅ Confirmed (true_positive, high confidence)
+
+**Vulnerable Code**:
+```c
+char buf[64];
+strcpy(buf, packet->payload);  // No bounds checking
+```
+
+**Risk**: Stack-based buffer overflow allows arbitrary code execution via crafted network packet
+
+**Remediation**:
+```c
+char buf[64];
+strncpy(buf, packet->payload, sizeof(buf) - 1);
+buf[sizeof(buf) - 1] = '\0';
+```
+
+**References**:
+- CWE-787: https://cwe.mitre.org/data/definitions/787.html
+- SANS Top 25: https://www.sans.org/top25-software-errors
+- SEI CERT C: https://wiki.sei.cmu.edu/confluence/display/c/STR31-C
 ```
 
 ## Verification Requirements
