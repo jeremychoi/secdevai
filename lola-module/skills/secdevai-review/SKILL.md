@@ -99,106 +99,80 @@ Tip: To review an excluded file, remove its pattern from .secdevaiignore.
 - Reference OWASP categories and/or CWE IDs
 - Provide context-aware explanations
 
-### Step 5.5: Validate Findings via Subagent
+### Step 5.5: Validate Findings — Delegate to `secdevai-validate`
 
-**Purpose**: Reduce false positives by dispatching a validation subagent to independently verify each finding against the actual code.
+**Purpose**: Reduce false positives and calibrate severity by dispatching findings to the `secdevai-validate` skill.
 
-For each finding from Step 5, dispatch a subagent (using parallel task execution when the platform supports it) with the following prompt template:
+**Delegate to the `secdevai-validate` skill.** Pass all findings from Step 5 to the validation skill, which independently:
+1. Reads the actual source code at each reported location
+2. Checks exploitability — whether a realistic attack path exists
+3. Calibrates severity against [Red Hat's classification](https://access.redhat.com/security/updates/classification) (Critical / Important / Moderate / Low)
+4. Produces a CVSS v3.1 base score analysis for each finding
+
+Dispatch via subagent when the platform supports parallel task execution. Pass findings using this prompt template:
 
 ```
-You are a security finding validator. Verify whether the following finding is a TRUE positive or FALSE positive by reading the actual source code.
+Use the secdevai-validate skill to validate the following security findings.
+Read the actual source code for each finding. Check exploitability, calibrate severity per Red Hat classification, and produce CVSS v3.1 analysis.
 
-Finding:
-- Type: [vulnerability type]
-- CWE/OWASP: [ID]
-- Location: [file:line]
-- Description: [finding description]
-
-Validation steps:
-1. Read the source file at the specified location
-2. Check if the vulnerable pattern actually exists at that location
-3. Check if mitigations are already in place (e.g., bounds checks, sanitization, safe wrappers, compiler flags)
-4. Check surrounding context — is the code reachable from untrusted input?
-5. For memory safety findings (CWE-787, CWE-416, CWE-125, CWE-476, CWE-119, CWE-190): verify the exact buffer sizes, allocation patterns, and control flow
-6. For concurrency findings (CWE-362): verify shared state and synchronization primitives
-
-Return a JSON object:
-{
-  "finding_id": "<sequential number>",
-  "verdict": "true_positive" | "false_positive" | "needs_review",
-  "confidence": "high" | "medium" | "low",
-  "reasoning": "<1-2 sentence explanation>",
-  "mitigations_found": ["<list any existing mitigations>"]
-}
+Findings:
+[paste the structured findings list from Step 5]
 ```
 
-**Processing validation results**:
-- **true_positive (high confidence)**: Keep finding as-is
-- **true_positive (medium/low confidence)**: Keep finding, add note about confidence level
-- **false_positive (high confidence)**: Remove finding from results, log to skipped findings
-- **false_positive (medium/low confidence)**: Keep finding but downgrade severity by one level and add "[Needs Manual Review]" tag
-- **needs_review**: Keep finding, add "[Needs Manual Review]" tag
+**Processing validation results** (returned by `secdevai-validate`):
 
-**If subagent dispatch is unavailable** (e.g., platform does not support parallel task execution): perform the validation inline by re-reading each flagged location and applying the same verification steps. Still annotate any uncertain findings with "[Needs Manual Review]".
+| Verdict | Action |
+|---------|--------|
+| **CONFIRMED** | Keep finding with original severity. Add CVSS vector and score. |
+| **ADJUSTED** | Update severity to the validated level. Add CVSS vector, score, and adjustment reason. |
+| **DISPUTED** | Keep finding, add "[Needs Manual Review]" tag and the dispute reasoning. |
+| **REJECTED** | Remove from results. Log to skipped findings with rejection reason. |
+
+For all retained findings, enrich the output with: CVSS vector string, CVSS numeric score, Red Hat severity, and exploitability verdict.
+
+**Report only valid, exploitable findings** in the final output. Non-exploitable findings that are still valid issues should be listed in a separate "Informational / Not Exploitable" section with the explanation from the validation skill.
+
+**If subagent dispatch is unavailable** (e.g., platform does not support parallel task execution): perform the validation inline by reading the `secdevai-validate` skill and applying its steps directly. Still annotate uncertain findings with "[Needs Manual Review]".
 
 ### Step 6: Present Findings
+
+Present only validated, exploitable findings. Group by Red Hat severity:
 
 ```
 ## 🔒 **Security Review Results**
 
-### 🔴 **Critical Findings** (2)
-- [Finding 1 with code reference]
-- [Finding 2 with code reference]
+### 🔴 **Critical** (2)
+- [Finding with code reference, CVSS vector/score, exploitability summary]
 
-### 🟠 **High Severity** (3)
-- [Finding details]
+### 🟠 **Important** (3)
+- [Finding details with CVSS]
 
-### 🟡 **Medium Severity** (5)
-- [Finding details]
+### 🟡 **Moderate** (5)
+- [Finding details with CVSS]
 
-**Total**: 10 findings across [file/codebase]
+### 🔵 **Low** (1)
+- [Finding details with CVSS]
+
+### ℹ️ **Informational / Not Exploitable** (2)
+- [Valid pattern but not exploitable — with explanation]
+
+**Total**: 11 validated findings across [file/codebase] (2 false positives rejected)
 ```
 
-### Step 7: Save Results
+Each finding should include:
+- `Red Hat Severity`: Critical / Important / Moderate / Low
+- `CVSS Vector`: CVSS:3.1/AV:X/AC:X/PR:X/UI:X/S:X/C:X/I:X/A:X
+- `CVSS Score`: numeric score
+- `Exploitability`: Exploitable / Conditionally exploitable / Not exploitable
+- `Validation`: CONFIRMED / ADJUSTED (with reason) / DISPUTED
 
-After presenting findings, collect all findings into structured JSON and export:
+### Step 7: Save Results (Optional)
 
-```python
-import importlib.util
-from pathlib import Path
+After presenting findings, ask the user:
 
-# Load the exporter from secdevai-export skill scripts
-script_path = Path("secdevai-export/scripts/results_exporter.py")
-spec = importlib.util.spec_from_file_location("results_exporter", script_path)
-mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
+> **Would you like to export these findings to Markdown and SARIF report files?**
 
-# Collect findings into data structure
-data = {
-    "metadata": {
-        "tool": "secdevai-ai-analysis",
-        "version": "1.0.0",
-        "timestamp": datetime.now().isoformat(),
-        "target_file": "[file path or 'codebase']",
-        "analyzer": "AI Security Review",
-    },
-    "summary": {
-        "total_findings": [count],
-        "critical": [count],
-        "high": [count],
-        "medium": [count],
-        "low": [count],
-        "info": [count],
-    },
-    "findings": [list of finding objects],
-}
-
-# Export to markdown and SARIF
-markdown_path, sarif_path = mod.export_results(data, command_type="review")
-```
-
-- The exporter will prompt the user to confirm the result directory (default: `secdevai-results`)
-- Results are saved with timestamp: `secdevai-review-YYYYMMDD_HHMMSS.md` and `.sarif`
+If the user confirms, **delegate to the `secdevai-export` skill**. Collect all findings into the structured data format documented in that skill and invoke export with `command_type="review"`. If the user declines, skip export and proceed.
 
 ### Step 8: Offer Remediation (if `fix` also specified)
 
@@ -381,7 +355,11 @@ ResultSet rs = stmt.executeQuery();
 **Location**: `network.c:87-89`
 **Language**: C
 **CWE**: CWE-787 (Out-of-bounds Write)
-**Validation**: ✅ Confirmed (true_positive, high confidence)
+**Red Hat Severity**: Critical
+**CVSS Vector**: CVSS:3.1/AV:N/AC:L/PR:N/UI:N/S:U/C:H/I:H/A:H
+**CVSS Score**: 9.8
+**Exploitability**: Exploitable — network-reachable parser with no bounds checking
+**Validation**: ✅ CONFIRMED
 
 **Vulnerable Code**:
 ```c
