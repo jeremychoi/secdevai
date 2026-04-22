@@ -88,7 +88,6 @@ This command uses multiple security context files:
 - `secdevai-review/context/security-review.context` - OWASP Top 10 patterns (always loaded)
 - `secdevai-review/context/wstg-testing.context` - OWASP WSTG v4.2 web app testing patterns (auto-loaded for web code)
 - `secdevai-review/context/golang-security.context` - Go-specific vulnerabilities and weaknesses (auto-loaded for Go code)
-- `secdevai-review/context/security-rules.md` - Extended pattern catalog (manual reference)
 
 **Multi-Language Support**: While context files contain primarily Python examples, all sub-skills MUST adapt security patterns to the language being reviewed (JavaScript, Java, Go, Ruby, PHP, C#, Rust, etc.). Translate the security principles and provide language-specific remediation with appropriate frameworks and idioms.
 
@@ -96,7 +95,7 @@ This command uses multiple security context files:
 
 This command integrates with:
 - `secdevai-review/context/` directory for security analysis guidelines
-- `secdevai-tool/scripts/security-review.sh` for optional tool integration
+- `secdevai-tool` for optional tool integration via containerized runners
 - `secdevai-dast/scripts/rapidast-scan.sh` for DAST scanning via RapiDAST (produces SARIF + `source-correlation.md`)
 - `secdevai-export/scripts/results_exporter.py` for result export
 - `.secdevaiignore` for excluding files from scans
