@@ -336,46 +336,162 @@ def convert_to_markdown(data: Dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _build_web_request(req: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a SARIF webRequest object (spec section 3.46)."""
+    sarif_req: Dict[str, Any] = {}
+    if "protocol" in req:
+        sarif_req["protocol"] = req["protocol"]
+    if "version" in req:
+        sarif_req["version"] = req["version"]
+    if "method" in req:
+        sarif_req["method"] = req["method"]
+    if "target" in req:
+        sarif_req["target"] = req["target"]
+    if "headers" in req:
+        sarif_req["headers"] = req["headers"]
+    if "parameters" in req:
+        sarif_req["parameters"] = req["parameters"]
+    if "body" in req and req["body"]:
+        sarif_req["body"] = {"text": req["body"]}
+    return sarif_req
+
+
+def _build_web_response(resp: Dict[str, Any]) -> Dict[str, Any]:
+    """Build a SARIF webResponse object (spec section 3.47)."""
+    sarif_resp: Dict[str, Any] = {}
+    if "protocol" in resp:
+        sarif_resp["protocol"] = resp["protocol"]
+    if "version" in resp:
+        sarif_resp["version"] = resp["version"]
+    if "statusCode" in resp:
+        sarif_resp["statusCode"] = resp["statusCode"]
+    if "reasonPhrase" in resp:
+        sarif_resp["reasonPhrase"] = resp["reasonPhrase"]
+    if "headers" in resp:
+        sarif_resp["headers"] = resp["headers"]
+    if "body" in resp and resp["body"]:
+        sarif_resp["body"] = {"text": resp["body"]}
+    return sarif_resp
+
+
+def _build_related_locations(
+    related: list[Dict[str, Any]],
+) -> list[Dict[str, Any]]:
+    """Build SARIF relatedLocations array (spec section 3.27.22)."""
+    sarif_locs = []
+    for idx, loc in enumerate(related):
+        sarif_loc: Dict[str, Any] = {"id": idx}
+        if "message" in loc:
+            sarif_loc["message"] = {"text": loc["message"]}
+        phys: Dict[str, Any] = {}
+        if "file" in loc:
+            phys["artifactLocation"] = {"uri": loc["file"]}
+        region: Dict[str, Any] = {}
+        if "start_line" in loc:
+            region["startLine"] = loc["start_line"]
+        if "end_line" in loc:
+            region["endLine"] = loc["end_line"]
+        if region:
+            phys["region"] = region
+        if "snippet" in loc:
+            ctx_start = loc.get("start_line", 1)
+            phys["contextRegion"] = {
+                "startLine": ctx_start,
+                "snippet": {"text": loc["snippet"]},
+            }
+        if phys:
+            sarif_loc["physicalLocation"] = phys
+        sarif_locs.append(sarif_loc)
+    return sarif_locs
+
+
+def _build_code_flows(
+    steps: list[Dict[str, Any]],
+    flow_message: str = "",
+) -> list[Dict[str, Any]]:
+    """Build SARIF codeFlows array (spec section 3.27.18 / 3.36 / 3.37)."""
+    thread_flow_locations = []
+    for step in steps:
+        tfl: Dict[str, Any] = {}
+        loc: Dict[str, Any] = {}
+        if "message" in step:
+            loc["message"] = {"text": step["message"]}
+        phys: Dict[str, Any] = {}
+        if "file" in step:
+            phys["artifactLocation"] = {"uri": step["file"]}
+        region: Dict[str, Any] = {}
+        if "start_line" in step:
+            region["startLine"] = step["start_line"]
+        if "end_line" in step:
+            region["endLine"] = step["end_line"]
+        if region:
+            phys["region"] = region
+        if phys:
+            loc["physicalLocation"] = phys
+        tfl["location"] = loc
+        thread_flow_locations.append(tfl)
+
+    code_flow: Dict[str, Any] = {
+        "threadFlows": [{"locations": thread_flow_locations}],
+    }
+    if flow_message:
+        code_flow["message"] = {"text": flow_message}
+    return [code_flow]
+
+
 def convert_to_sarif(data: Dict[str, Any]) -> Dict[str, Any]:
     """
     Convert security review results to SARIF format.
-    
+
+    Supports DAST source-correlation fields per SARIF v2.1.0:
+      - webRequest / webResponse  (spec sections 3.27.14-15, 3.46-47)
+      - relatedLocations          (spec section 3.27.22)
+      - codeFlows                 (spec sections 3.27.18, 3.36-37)
+
+    These fields are emitted when the corresponding keys are present in a
+    finding dict (web_request, web_response, related_locations, code_flow).
+
     Args:
         data: Security review results dictionary
-        
+
     Returns:
         SARIF formatted dictionary
     """
     metadata = data.get("metadata", {})
     findings = data.get("findings", [])
-    
-    # Create SARIF structure
-    sarif = {
-        "version": SARIF_VERSION,
-        "$schema": SARIF_SCHEMA,
-        "runs": [
+
+    run: Dict[str, Any] = {
+        "tool": {
+            "driver": {
+                "name": metadata.get("tool", "secdevai"),
+                "version": metadata.get("version", "1.0.0"),
+                "informationUri": "https://github.com/RedHatProductSecurity/secdevai",
+                "rules": [],
+            }
+        },
+        "results": [],
+        "invocations": [
             {
-                "tool": {
-                    "driver": {
-                        "name": metadata.get("tool", "secdevai"),
-                        "version": metadata.get("version", "1.0.0"),
-                        "informationUri": "https://github.com/RedHatProductSecurity/secdevai",
-                        "rules": [],
-                    }
-                },
-                "results": [],
-                "invocations": [
-                    {
-                        "executionSuccessful": True,
-                        "exitCode": 0,
-                    }
-                ],
+                "executionSuccessful": True,
+                "exitCode": 0,
             }
         ],
     }
-    
+
+    sarif = {
+        "version": SARIF_VERSION,
+        "$schema": SARIF_SCHEMA,
+        "runs": [run],
+    }
+
+    # Run-level caches for webRequests / webResponses (spec sections 3.14.21-22)
+    web_requests_cache: list[Dict[str, Any]] = []
+    web_responses_cache: list[Dict[str, Any]] = []
+    web_req_index: Dict[str, int] = {}
+    web_resp_index: Dict[str, int] = {}
+
     # Extract unique rules
-    rules = {}
+    rules: Dict[str, Dict[str, Any]] = {}
     for finding in findings:
         rule_id = finding.get("id", "")
         if rule_id and rule_id not in rules:
@@ -392,27 +508,25 @@ def convert_to_sarif(data: Dict[str, Any]) -> Dict[str, Any]:
                     "tags": [],
                 },
             }
-            
-            # Add OWASP and CWE tags
+
             owasp_category = finding.get("owasp_category")
             if owasp_category:
                 rules[rule_id]["properties"]["tags"].append(owasp_category)
-            
+
             cwe = finding.get("cwe")
             if cwe:
                 rules[rule_id]["properties"]["tags"].append(cwe)
-    
-    # Add rules to SARIF
-    sarif["runs"][0]["tool"]["driver"]["rules"] = list(rules.values())
-    
+
+    run["tool"]["driver"]["rules"] = list(rules.values())
+
     # Convert findings to SARIF results
     for finding in findings:
         location = finding.get("location", {})
         file_path = location.get("file", "")
         start_line = location.get("start_line")
         end_line = location.get("end_line")
-        
-        result = {
+
+        result: Dict[str, Any] = {
             "ruleId": finding.get("id", ""),
             "level": severity_to_sarif_level(finding.get("severity", "INFO")),
             "message": {
@@ -428,17 +542,19 @@ def convert_to_sarif(data: Dict[str, Any]) -> Dict[str, Any]:
                 }
             ],
             "properties": {
-                "severity": severity_to_sarif_severity(finding.get("severity", "INFO")),
+                "severity": severity_to_sarif_severity(
+                    finding.get("severity", "INFO")
+                ),
             },
         }
-        
+
         # Add region (line numbers)
         if start_line:
-            region = {"startLine": start_line}
+            region: Dict[str, int] = {"startLine": start_line}
             if end_line:
                 region["endLine"] = end_line
             result["locations"][0]["physicalLocation"]["region"] = region
-        
+
         # Add code snippet if available
         vulnerable_code = finding.get("vulnerable_code")
         if vulnerable_code and start_line:
@@ -448,9 +564,52 @@ def convert_to_sarif(data: Dict[str, Any]) -> Dict[str, Any]:
                     "text": vulnerable_code,
                 },
             }
-        
-        sarif["runs"][0]["results"].append(result)
-    
+
+        # --- DAST source-correlation fields ---
+
+        # webRequest (spec section 3.27.14)
+        raw_req = finding.get("web_request")
+        if raw_req:
+            sarif_req = _build_web_request(raw_req)
+            cache_key = json.dumps(sarif_req, sort_keys=True)
+            if cache_key not in web_req_index:
+                idx = len(web_requests_cache)
+                sarif_req_cached = {**sarif_req, "index": idx}
+                web_requests_cache.append(sarif_req_cached)
+                web_req_index[cache_key] = idx
+            result["webRequest"] = {"index": web_req_index[cache_key]}
+
+        # webResponse (spec section 3.27.15)
+        raw_resp = finding.get("web_response")
+        if raw_resp:
+            sarif_resp = _build_web_response(raw_resp)
+            cache_key = json.dumps(sarif_resp, sort_keys=True)
+            if cache_key not in web_resp_index:
+                idx = len(web_responses_cache)
+                sarif_resp_cached = {**sarif_resp, "index": idx}
+                web_responses_cache.append(sarif_resp_cached)
+                web_resp_index[cache_key] = idx
+            result["webResponse"] = {"index": web_resp_index[cache_key]}
+
+        # relatedLocations (spec section 3.27.22)
+        raw_related = finding.get("related_locations")
+        if raw_related:
+            result["relatedLocations"] = _build_related_locations(raw_related)
+
+        # codeFlows (spec section 3.27.18)
+        raw_flow = finding.get("code_flow")
+        if raw_flow:
+            flow_msg = finding.get("code_flow_message", "")
+            result["codeFlows"] = _build_code_flows(raw_flow, flow_msg)
+
+        run["results"].append(result)
+
+    # Attach run-level caches when present
+    if web_requests_cache:
+        run["webRequests"] = web_requests_cache
+    if web_responses_cache:
+        run["webResponses"] = web_responses_cache
+
     return sarif
 
 
