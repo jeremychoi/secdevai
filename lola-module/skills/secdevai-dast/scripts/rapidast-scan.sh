@@ -308,6 +308,22 @@ else
     echo "RapiDAST scan finished with exit code ${EXIT_CODE} (may include findings — check results)."
 fi
 
+# ── Flatten RapiDAST output into rapidast_result/ ────────────────────────────
+# RapiDAST creates a nested structure like <shortName>/DAST-<timestamp>-RapiDAST/.
+# Flatten it to $OUTPUT_DIR_ABS/rapidast_result/ for a predictable layout.
+RAPIDAST_RESULT_DIR="${OUTPUT_DIR_ABS}/rapidast_result"
+NESTED_DIR=$(find "$OUTPUT_DIR_ABS" -mindepth 2 -maxdepth 2 -type d -name "DAST-*" 2>/dev/null | head -n 1)
+
+if [[ -n "$NESTED_DIR" ]]; then
+    echo "Reorganizing RapiDAST output into rapidast_result/ ..."
+    rm -rf "$RAPIDAST_RESULT_DIR"
+    mv "$NESTED_DIR" "$RAPIDAST_RESULT_DIR"
+    # Remove the now-empty parent directory left by RapiDAST (e.g. <shortName>/)
+    PARENT_DIR=$(dirname "$NESTED_DIR")
+    rmdir "$PARENT_DIR" 2>/dev/null || true
+    echo "Done."
+fi
+
 echo "Results directory: ${OUTPUT_DIR_ABS}"
 
 # Print SARIF file location if found

@@ -9,7 +9,7 @@ description: Dynamic Application Security Testing (DAST) using RapiDAST and OWAS
 
 Performs Dynamic Application Security Testing (DAST) against a running web application or API using [RapiDAST](https://github.com/RedHatProductSecurity/rapidast) (which wraps OWASP ZAP). All scans run via the `quay.io/redhatproductsecurity/rapidast:latest` container image — no local ZAP installation required.
 
-The workflow auto-detects the target (Dockerfile/Compose or user-supplied URL), discovers OpenAPI specs, asks about authentication, runs a passive scan first, and optionally follows up with active scanning. After scanning, it traces each finding back to the exact source file and line that is the root cause — bridging the gap between a runtime HTTP observation and the vulnerable code that produced it.
+By default, scans are restricted to **localhost** targets (applications running on the local machine). Scanning external or remote hosts requires explicit user confirmation with a legal and safety warning. The workflow auto-detects the target (Dockerfile/Compose or user-supplied URL), discovers OpenAPI specs, asks about authentication, asks **when building the RapiDAST config** whether to enable `activeScan` (default: passive only), and can optionally re-run with active scanning after a passive-only run. After scanning, it traces each finding back to the exact source file and line that is the root cause — bridging the gap between a runtime HTTP observation and the vulnerable code that produced it.
 
 ## Usage
 
@@ -43,26 +43,51 @@ Search the current project directory for container definitions:
    - Target URL: `http://localhost:<port>`
    - Note: the skill started this container and must clean it up in Step 7.
 4. **If no container file is found AND the user did not supply `--url`**:
-   - Display this warning and ask for the URL:
+   - Ask the user for a target URL. Recommend `localhost`:
 
    ```
-   ⚠️  LEGAL WARNING — READ BEFORE PROCEEDING ⚠️
+   No container definition found. Please provide the target URL.
+   Tip: localhost targets (e.g. http://localhost:8080) proceed immediately.
+   External hosts require additional confirmation.
 
-   DAST scanning sends active HTTP requests to the target application.
-   Scanning a system you do not own or have explicit written permission
-   to test may violate the Computer Fraud and Abuse Act (CFAA), the
-   Computer Misuse Act, GDPR, and other laws.
-
-   You MUST confirm all of the following before proceeding:
-   1. You own the target application OR have explicit written authorization to test it.
-   2. The target is a TEST or STAGING environment — NOT production.
-   3. You accept full legal responsibility for this scan.
-
-   Please enter the target URL to scan (or type 'cancel' to abort):
+   Enter the target URL to scan (or type 'cancel' to abort):
    ```
 
-   Wait for user input. If they type `cancel`, stop. Otherwise use their URL as the target.
-5. **If `--url` was supplied**: use it directly. Still display a condensed reminder: "Confirm this is a system you own or have written permission to test."
+   Wait for user input. If they type `cancel`, stop. Otherwise use their URL as the target and continue to Step 1.5.
+5. **If `--url` was supplied**: use it directly and continue to Step 1.5.
+
+---
+
+### Step 1.5: Validate Target Scope (Localhost vs. Remote)
+
+Determine whether the resolved target URL points to the local machine or a remote host.
+
+**Localhost** — any of: `localhost`, `127.0.0.1`, `[::1]`, `0.0.0.0`, `host.docker.internal`. If the target hostname matches one of these, proceed directly to Step 2 with no additional prompts.
+
+**Remote host** — everything else. Display the following warning and require explicit confirmation before continuing:
+
+```
+🛑  REMOTE HOST DETECTED — CONFIRMATION REQUIRED 🛑
+
+Target: <TARGET_URL>
+
+This target is NOT on localhost. DAST scanning sends HTTP requests —
+including attack payloads during active scans — to the target application.
+Scanning a system you do not own or have explicit written permission
+to test may violate the Computer Fraud and Abuse Act (CFAA), the
+Computer Misuse Act, GDPR, and other laws.
+
+You MUST confirm ALL of the following before proceeding:
+1. You own the target application OR have explicit written authorization to test it.
+2. The target is a TEST or STAGING environment — NOT production.
+3. You accept full legal responsibility for this scan.
+4. You understand that active scanning (if enabled later) sends attack payloads.
+
+Type 'confirm' to proceed or 'cancel' to abort:
+```
+
+- If the user types `confirm` (case-insensitive): proceed to Step 2.
+- Any other response (including empty): abort the scan.
 
 ---
 
@@ -144,7 +169,30 @@ Collect the required parameters for the chosen auth type. For `oauth2`, remind t
 
 ---
 
-### Step 5: Run Passive Scan
+### Step 4.5: Configure Active Scan (`activeScan`)
+
+Before generating the RapiDAST YAML, ask whether to include **active scanning** in the same run. The script maps this to the `activeScan` block in the generated config (see `references/rapidast-config-templates.md` — `policy: API-scan-minimal` when enabled).
+
+**Default: passive + spider/api crawl only** (no `activeScan` block). Active scanning sends attack payloads and must not run against production.
+
+Prompt:
+
+```
+Include OWASP ZAP active scanning in this RapiDAST config? (yes/no, default: no)
+
+- No  : passive rules only (observes traffic; no attack payloads from active rules)
+- Yes : adds activeScan (API-scan-minimal) — more thorough but sends payloads; use only on
+        test/staging you own or are authorized to test
+
+Enable active scan for this run?
+```
+
+- If the user chooses **no** (or Enter): set `ENABLE_ACTIVE_SCAN=false` for Step 5 — do not pass `--active-scan`.
+- If the user chooses **yes**: set `ENABLE_ACTIVE_SCAN=true` — pass `--active-scan` in Step 5. Remind them of legal scope (same spirit as Step 1.5): staging/test only, written authorization for non-owned targets.
+
+---
+
+### Step 5: Run RapiDAST Scan
 
 Call `scripts/rapidast-scan.sh` with the parameters gathered in the previous steps. The script generates a RapiDAST YAML config and runs the container.
 
@@ -157,27 +205,31 @@ bash scripts/rapidast-scan.sh \
   [--max-duration <MINUTES>] \
   [--auth-type "<AUTH_TYPE>"] \
   [--auth-params "<JSON_PARAMS>"] \
+  $([ "$ENABLE_ACTIVE_SCAN" = true ] && echo "--active-scan") \
   --output-dir "./secdevai-results/dast"
 ```
 
-Show the user the RapiDAST container output as it runs. Passive scanning typically takes 2–15 minutes depending on the application size.
+(If your environment does not use a shell variable, pass `--active-scan` literally when the user answered yes in Step 4.5; omit it when they answered no.)
+
+Show the user the RapiDAST container output as it runs. **Passive-only** runs typically take 2–15 minutes depending on application size. **With active scan**, expect roughly 30–120 minutes in many cases.
 
 Refer to `references/rapidast-config-templates.md` for the exact YAML that the script generates.
 
 ---
 
-### Step 6: Present Passive Scan Results
+### Step 6: Present Scan Results
 
 After the scan completes:
 
-1. Locate the SARIF output: `./secdevai-results/dast/zap/zap-report.sarif` (or search for `*.sarif` under the results directory)
+1. Locate the SARIF output: `./secdevai-results/dast/rapidast_result/rapidast-scan-results.sarif` (or search for `*.sarif` under the results directory)
 2. Parse the SARIF file and present a summary:
 
 ```
-## DAST Passive Scan Results
+## DAST Scan Results
 
 **Target**: <URL>
 **Scan mode**: <OpenAPI / Spider / Ajax Spider>
+**Active scan**: <enabled in config / passive only>
 **Duration**: <elapsed>
 
 ### Findings Summary
@@ -193,16 +245,18 @@ After the scan completes:
 [List up to 10 highest-severity findings with: rule ID, severity, description, affected URL]
 ```
 
-3. Ask the user if they want active scanning:
+3. **Follow-up active scan (only if Step 4.5 was “no”):** If the run was **passive only** (`ENABLE_ACTIVE_SCAN` was false), ask whether to run a **second** pass with active scanning:
 
 ```
-Passive scan complete. Active scanning probes the application more aggressively
-(sends attack payloads) and may take 30–120 minutes.
+This run used passive rules only. Active scanning probes the application more
+aggressively (sends attack payloads) and may take 30–120 minutes.
 
-Run active scan? (yes/no):
+Re-run the scan with --active-scan? (yes/no):
 ```
 
-If yes, re-run `scripts/rapidast-scan.sh` with `--active-scan` flag. Show results once complete.
+If yes, re-run `scripts/rapidast-scan.sh` with the **same** parameters as before **plus** `--active-scan`, and show results once complete.
+
+If Step 4.5 was already **yes**, skip this prompt — active scanning was already part of the RapiDAST config for this run.
 
 ---
 
@@ -251,21 +305,20 @@ If a finding cannot be traced to source (e.g. a missing HTTP header, or the sour
 
 #### Save the correlation report
 
-Write the full source correlation as `source-correlation.md` into the same directory as the SARIF file:
+Write the full source correlation as `source-correlation.md`. Save it to the **session directory** created by the exporter in Step 8 (alongside the `.md` and `.sarif` exports), not inside the `rapidast_result/` directory:
 
 ```python
 from pathlib import Path
-import json, datetime
+import datetime
 
-sarif_path = next(Path("./secdevai-results/dast").rglob("rapidast-scan-results.sarif"), None)
-correlation_path = sarif_path.parent / "source-correlation.md"
+# session_dir is the directory created by export_results() in Step 8
+# e.g. ./secdevai-results/dast/secdevai-20260422_143025/
+correlation_path = session_dir / "source-correlation.md"
 
-# Build the report content from the trace analysis above
 report_lines = [
     f"# DAST Source Correlation Report",
     f"",
     f"**Target**: {TARGET_URL}",
-    f"**SARIF**: {sarif_path.name}",
     f"**Generated**: {datetime.datetime.now().isoformat()}",
     f"",
     f"This report maps each DAST finding to its root cause in the source code.",
@@ -292,17 +345,19 @@ for finding in data["findings"]:
 
 ---
 
-### Step 8: Export Results
+### Step 8: Export Results and Organize Output
 
-After scanning is complete, export the findings using the `secdevai-export` skill:
+After scanning is complete, export the findings using the `secdevai-export` skill, then consolidate all artifacts into a single session directory:
 
 ```python
 import importlib.util
 from pathlib import Path
-import json, datetime
+import json, datetime, shutil
+
+dast_results_dir = Path("./secdevai-results/dast")
 
 # Load the SARIF file produced by RapiDAST
-sarif_path = next(Path("./secdevai-results/dast").rglob("*.sarif"), None)
+sarif_path = next(dast_results_dir.rglob("*.sarif"), None)
 
 # Load the exporter
 script_path = Path("secdevai-export/scripts/results_exporter.py")
@@ -324,6 +379,27 @@ data = {
 }
 
 markdown_path, sarif_path = mod.export_results(data, command_type="dast")
+
+# Move rapidast_result/ into the session directory
+session_dir = markdown_path.parent  # e.g. secdevai-results/dast/secdevai-20260422_143025/
+rapidast_src = dast_results_dir / "rapidast_result"
+if rapidast_src.exists():
+    shutil.move(str(rapidast_src), str(session_dir / "rapidast_result"))
+```
+
+The final session directory structure:
+
+```
+secdevai-results/dast/
+  secdevai-YYYYMMDD_HHMMSS/
+    secdevai-dast-YYYYMMDD_HHMMSS.md       # exported Markdown report
+    secdevai-dast-YYYYMMDD_HHMMSS.sarif    # exported SARIF report
+    source-correlation.md                   # root-cause mapping (Step 7)
+    rapidast_result/                        # raw RapiDAST/ZAP output
+      zap/
+      config.yaml
+      rapidast-defaults.yaml
+      rapidast-scan-results.sarif
 ```
 
 Tell the user where the reports were saved.
@@ -345,7 +421,8 @@ If the skill started a container in Step 1, stop and remove it:
 
 ## Notes
 
-- **Passive scan first**: Passive scanning observes traffic without sending attack payloads — safe for staging environments. Always run it before active scanning.
+- **Localhost by default**: Scans are restricted to localhost targets without additional prompts. Scanning any remote or external host requires the user to type `confirm` after reviewing the legal and safety warning (Step 1.5). This prevents accidental scanning of systems the user does not own.
+- **Passive by default, active in config**: When setting up the RapiDAST YAML, default to passive-only (`activeScan` off). The user may enable `activeScan` in Step 4.5 for the same run, or re-run with `--active-scan` after a passive-only run (Step 6). Passive scanning observes without active-rule attack payloads — safer for staging. Never enable active scanning against production.
 - **Active scan warning**: Active scanning sends attack payloads. Never run against production. It can trigger WAF blocks, account lockouts, or application errors.
 - **Results directory**: All scan artifacts go to `./secdevai-results/dast/` by default. Override the base with `export SECDEVAI_RESULTS_DIR=/your/path` — the `/dast` sub-path is always appended. This env var is shared with all other secdevai commands (`review`, `fix`, `tool`) so setting it once configures the base for everything.
 - **RapiDAST container**: Scans run via `quay.io/redhatproductsecurity/rapidast:latest`. Ensure the container runtime can pull from `quay.io`.
