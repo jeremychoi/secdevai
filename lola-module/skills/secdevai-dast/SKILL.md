@@ -1,13 +1,13 @@
 ---
 name: secdevai-dast
-description: Dynamic Application Security Testing (DAST) using RapiDAST and OWASP ZAP. Use when the user wants to scan a running web app or API for security vulnerabilities, run a DAST scan, test a service endpoint, use RapiDAST or ZAP, or says "/secdevai dast" or "/secdevai-dast". Auto-detects Dockerfile/Compose for containerized targets, finds OpenAPI specs, guides the full scan workflow from target setup through SARIF result export, and — uniquely — traces each DAST finding back to the exact source file and line that is the root cause.
+description: Dynamic Application Security Testing (DAST) using RapiDAST and ZAP. Use when the user wants to scan a running web app or API for security vulnerabilities, run a DAST scan, test a service endpoint, use RapiDAST or ZAP, or says "/secdevai dast" or "/secdevai-dast". Auto-detects Dockerfile/Compose for containerized targets, finds OpenAPI specs, guides the full scan workflow from target setup through SARIF result export, and — uniquely — traces each DAST finding back to the exact source file and line that is the root cause.
 ---
 
 # SecDevAI DAST Command
 
 ## Description
 
-Performs Dynamic Application Security Testing (DAST) against a running web application or API using [RapiDAST](https://github.com/RedHatProductSecurity/rapidast) (which wraps OWASP ZAP). All scans run via the `quay.io/redhatproductsecurity/rapidast:latest` container image — no local ZAP installation required.
+Performs Dynamic Application Security Testing (DAST) against a running web application or API using [RapiDAST](https://github.com/RedHatProductSecurity/rapidast) and its main scanner ZAP. All scans run via the RapiDAST container executed by `scripts/rapidast-scan.sh` — no local ZAP installation required.
 
 By default, scans are restricted to **localhost** targets (applications running on the local machine). Scanning external or remote hosts requires explicit user confirmation with a legal and safety warning. The workflow auto-detects the target (Dockerfile/Compose or user-supplied URL), discovers OpenAPI specs, asks about authentication, asks **when building the RapiDAST config** whether to enable `activeScan` (default: passive only), and can optionally re-run with active scanning after a passive-only run. After scanning, it traces each finding back to the exact source file and line that is the root cause — bridging the gap between a runtime HTTP observation and the vulnerable code that produced it.
 
@@ -178,7 +178,7 @@ Before generating the RapiDAST YAML, ask whether to include **active scanning** 
 Prompt:
 
 ```
-Include OWASP ZAP active scanning in this RapiDAST config? (yes/no, default: no)
+Include ZAP active scanning in this RapiDAST config? (yes/no, default: no)
 
 - No  : passive rules only (observes traffic; no attack payloads from active rules)
 - Yes : adds activeScan (API-scan-minimal) — more thorough but sends payloads; use only on
@@ -347,31 +347,15 @@ for finding in data["findings"]:
 
 ### Step 8: Export Results and Organize Output
 
-After scanning is complete, export the findings using the `secdevai-export` skill, then consolidate all artifacts into a single session directory:
+After scanning is complete, invoke the `secdevai-export` skill (see `secdevai-export/SKILL.md` for the exporter API). Pass a `data` dict with these DAST-specific fields:
 
 ```python
-import importlib.util
-from pathlib import Path
-import json, datetime, shutil
-
-dast_results_dir = Path("./secdevai-results/dast")
-
-# Load the SARIF file produced by RapiDAST
-sarif_path = next(dast_results_dir.rglob("*.sarif"), None)
-
-# Load the exporter
-script_path = Path("secdevai-export/scripts/results_exporter.py")
-spec = importlib.util.spec_from_file_location("results_exporter", script_path)
-mod = importlib.util.module_from_spec(spec)
-spec.loader.exec_module(mod)
-
-# Build the data structure from SARIF findings
 data = {
     "metadata": {
         "tool": "rapidast",
-        "version": "latest",
+        "version": "",
         "timestamp": datetime.datetime.now().isoformat(),
-        "analyzer": "RapiDAST / OWASP ZAP DAST",
+        "analyzer": "RapiDAST / ZAP DAST",
         "target": TARGET_URL,
     },
     "summary": { ... },   # counts from SARIF results
@@ -379,8 +363,15 @@ data = {
 }
 
 markdown_path, sarif_path = mod.export_results(data, command_type="dast")
+```
 
-# Move rapidast_result/ into the session directory
+After the exporter returns, move the raw RapiDAST output into the session directory so all artifacts are in one place:
+
+```python
+import shutil
+from pathlib import Path
+
+dast_results_dir = Path("./secdevai-results/dast")
 session_dir = markdown_path.parent  # e.g. secdevai-results/dast/secdevai-20260422_143025/
 rapidast_src = dast_results_dir / "rapidast_result"
 if rapidast_src.exists():
@@ -425,7 +416,7 @@ If the skill started a container in Step 1, stop and remove it:
 - **Passive by default, active in config**: When setting up the RapiDAST YAML, default to passive-only (`activeScan` off). The user may enable `activeScan` in Step 4.5 for the same run, or re-run with `--active-scan` after a passive-only run (Step 6). Passive scanning observes without active-rule attack payloads — safer for staging. Never enable active scanning against production.
 - **Active scan warning**: Active scanning sends attack payloads. Never run against production. It can trigger WAF blocks, account lockouts, or application errors.
 - **Results directory**: All scan artifacts go to `./secdevai-results/dast/` by default. Override the base with `export SECDEVAI_RESULTS_DIR=/your/path` — the `/dast` sub-path is always appended. This env var is shared with all other secdevai commands (`review`, `fix`, `tool`) so setting it once configures the base for everything.
-- **RapiDAST container**: Scans run via `quay.io/redhatproductsecurity/rapidast:latest`. Ensure the container runtime can pull from `quay.io`.
+- **RapiDAST container**: The scan script pulls and runs the RapiDAST image; ensure the container runtime has network access to pull images from your configured registries.
 - **Network access**: When scanning a locally started container, RapiDAST runs inside its own container. On Linux, use `--network host` or reference the host via the gateway IP. On macOS with Docker Desktop, use `host.docker.internal` instead of `localhost` in the target URL passed to RapiDAST.
 - **macOS host resolution**: If the target is `http://localhost:<port>`, automatically substitute `host.docker.internal` as the hostname when running the RapiDAST container on macOS (detected via `uname -s`).
 - **Source correlation**: Step 7 traces each finding to source code. It works best when the project source is available locally. For findings that are purely response-level (missing headers, server version leaks), source correlation is noted as "not applicable" — these are fixed in server/framework configuration, not application code.
