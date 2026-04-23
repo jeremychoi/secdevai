@@ -78,7 +78,7 @@ exec "$runtime" run --rm --read-only \
     --cap-drop ALL \
     --security-opt=no-new-privileges \
     --user "$(id -u):$(id -g)" \
-    --memory=512m \
+    --memory=1g \
     --pids-limit=256 \
     --network=none \
     ${env_args[@]+"${env_args[@]}"} \
