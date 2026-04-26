@@ -1,0 +1,11 @@
+# Stage 1: clone rule sets (requires network; not available at scan time)
+FROM alpine AS base
+RUN apk add --no-cache git
+RUN git clone --depth 1 https://github.com/semgrep/semgrep-rules /sgrules
+RUN git clone --depth 1 https://github.com/trailofbits/semgrep-rules /sgrules-trail
+
+# Stage 2: bundle rules into the official semgrep image
+FROM docker.io/semgrep/semgrep:latest
+COPY --from=base /sgrules       /sgrules
+COPY --from=base /sgrules-trail /sgrules-trail
+ENTRYPOINT ["semgrep"]
